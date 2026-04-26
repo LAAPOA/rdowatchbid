@@ -1697,6 +1697,9 @@ function generateCombinedPDF() {
   const name = (document.getElementById('w-name').value || document.getElementById('r-name').value).trim();
   const serial = (document.getElementById('w-serial').value || document.getElementById('r-serial').value).trim();
   const curWatch = document.getElementById('w-curwatch').value || document.getElementById('r-watch').value || '';
+  const rank = document.getElementById('w-rank').value || 'Officer';
+  const rankAbbr = rank === 'Sergeant' ? 'Sgt.' : 'Ofcr.';
+  const nameWithRank = `${rankAbbr} ${name}`;
 
   if (!name) return toast('Officer name required', true);
   if (!serial) return toast('Serial number required', true);
@@ -1752,7 +1755,7 @@ function generateCombinedPDF() {
 
   // Form 1: Watch BID — 3-DP combined
   drawAPD086(doc, PAGE_MARGIN + 4, FORM_H, {
-    name, serial, curWatch,
+    name: nameWithRank, serial, curWatch,
     dpHeader: 'DP#s',
     dpRange: `${dps[0].dp} - ${dps[2].dp}`,
     startDate: fmtMDDYYYY(dps[0].start),
@@ -1777,7 +1780,7 @@ function generateCombinedPDF() {
     const info = dps[slotIdx];
 
     drawAPD086(doc, PAGE_MARGIN + 4 + FORM_H * (i + 1), FORM_H, {
-      name, serial, curWatch,
+      name: nameWithRank, serial, curWatch,
       dpHeader: 'DP#',
       dpRange: String(info.dp),
       startDate: fmtMDDYYYY(info.start),
