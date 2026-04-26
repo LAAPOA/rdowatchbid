@@ -1,0 +1,2078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LAXPD Watch &amp; RDO Bid</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --navy: #0a1f3d;
+    --navy-deep: #061429;
+    --navy-light: #15355e;
+    --gold: #c9a961;
+    --gold-bright: #e6c478;
+    --paper: #f5f2eb;
+    --paper-dark: #e8e3d6;
+    --ink: #1a1a1a;
+    --ink-soft: #4a4a4a;
+    --line: #c9c2b0;
+    --rdo: #1a4d7a;
+    --rdo-light: #2e6ba1;
+    --vac: #8b3a1f;
+    --vac-light: #b04d2a;
+    --weekend: #ebe5d2;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  body {
+    background-image:
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 38px,
+        rgba(10, 31, 61, 0.04) 38px,
+        rgba(10, 31, 61, 0.04) 39px
+      );
+  }
+
+  .wrap {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 24px 20px 80px;
+  }
+
+  /* ===== HEADER ===== */
+  header {
+    background: var(--navy);
+    color: var(--paper);
+    padding: 24px 32px;
+    border-bottom: 4px solid var(--gold);
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 200px;
+    background: linear-gradient(135deg, transparent 0%, rgba(201, 169, 97, 0.08) 100%);
+    pointer-events: none;
+  }
+  .badge-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .shield {
+    width: 52px; height: 60px;
+    flex-shrink: 0;
+    fill: var(--gold);
+  }
+  .title-block h1 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .title-block .subtitle {
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold-bright);
+    margin-top: 6px;
+    font-weight: 500;
+  }
+
+  /* ===== MASTER PICKER ===== */
+  .picker {
+    background: white;
+    border: 1px solid var(--line);
+    border-top: none;
+    padding: 24px 32px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .picker-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-right: 8px;
+  }
+  .mode-btn {
+    background: var(--paper);
+    border: 2px solid var(--line);
+    padding: 12px 28px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 16px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+  .mode-btn:hover {
+    border-color: var(--navy);
+    color: var(--navy);
+  }
+  .mode-btn.active {
+    background: var(--navy);
+    border-color: var(--navy);
+    color: var(--paper);
+  }
+  .mode-btn.active::before {
+    content: '▸ ';
+    color: var(--gold-bright);
+  }
+
+  /* ===== FORM CARD ===== */
+  .card {
+    background: white;
+    border: 1px solid var(--line);
+    border-top: none;
+    padding: 32px;
+  }
+  .card-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 20px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--navy);
+    border-bottom: 2px solid var(--gold);
+    padding-bottom: 8px;
+    margin-bottom: 24px;
+    display: inline-block;
+  }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px 20px;
+    margin-bottom: 24px;
+  }
+  .field-grid.four-col {
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+  }
+  .field.full { grid-column: 1 / -1; }
+  label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  input[type="text"], input[type="number"], select {
+    border: 1px solid var(--line);
+    background: var(--paper);
+    padding: 10px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+    transition: border-color 0.15s, background 0.15s;
+  }
+  input[type="text"]:focus, input[type="number"]:focus, select:focus {
+    outline: none;
+    border-color: var(--navy);
+    background: white;
+  }
+
+  /* ===== WATCH PICKER ===== */
+  .watch-options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .watch-opt {
+    background: var(--paper);
+    border: 2px solid var(--line);
+    padding: 18px 12px 0;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    overflow: hidden;
+    position: relative;
+  }
+  .watch-opt:hover {
+    border-color: var(--navy);
+    transform: translateY(-1px);
+  }
+  .watch-opt .w-num {
+    font-family: 'Oswald', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1;
+    letter-spacing: 0.04em;
+  }
+  .watch-opt .w-label {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-top: 6px;
+    margin-bottom: 14px;
+  }
+  .watch-opt .w-status {
+    background: var(--paper-dark);
+    color: var(--ink-soft);
+    font-family: 'Oswald', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 8px 4px;
+    margin: 0 -12px;
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+
+  /* 1ST CHOICE state */
+  .watch-opt.c-1 {
+    background: var(--navy);
+    border-color: var(--gold);
+  }
+  .watch-opt.c-1 .w-num { color: var(--gold-bright); }
+  .watch-opt.c-1 .w-label { color: white; }
+  .watch-opt.c-1 .w-status {
+    background: var(--gold);
+    color: var(--navy);
+    font-weight: 700;
+  }
+
+  /* 2ND CHOICE state */
+  .watch-opt.c-2 {
+    background: var(--paper-dark);
+    border-color: var(--navy);
+  }
+  .watch-opt.c-2 .w-num { color: var(--navy); }
+  .watch-opt.c-2 .w-label { color: var(--ink-soft); }
+  .watch-opt.c-2 .w-status {
+    background: var(--navy);
+    color: var(--gold-bright);
+    font-weight: 700;
+  }
+
+  .dp-range {
+    background: var(--paper);
+    border-left: 3px solid var(--gold);
+    padding: 14px 18px;
+    margin-bottom: 24px;
+    font-size: 14px;
+  }
+  .dp-range strong {
+    font-family: 'Oswald', sans-serif;
+    color: var(--navy);
+    letter-spacing: 0.04em;
+  }
+  .dp-range-list {
+    margin-top: 6px;
+    color: var(--ink-soft);
+    font-size: 13px;
+  }
+
+  /* ===== RDO SLOT PANELS (stacked, one per DP) ===== */
+  .rdo-slot {
+    border: 1px solid var(--line);
+    background: var(--paper);
+    margin-bottom: 18px;
+    overflow: hidden;
+  }
+  .rdo-slot-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: var(--navy);
+    color: var(--paper);
+    flex-wrap: wrap;
+  }
+  .rdo-slot-head .slot-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--gold-bright);
+    margin-right: 8px;
+  }
+  .rdo-slot-head .slot-dp {
+    font-family: 'Oswald', sans-serif;
+    font-size: 13px;
+    color: var(--paper);
+    letter-spacing: 0.04em;
+  }
+  .rdo-slot-head .slot-dp span {
+    color: var(--gold-bright);
+    font-weight: 700;
+    margin: 0 4px;
+  }
+  .rdo-slot-body {
+    padding: 16px;
+  }
+  .rdo-controls {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .rdo-controls .field { flex: 0 0 auto; }
+  .rdo-controls .field input,
+  .rdo-controls .field select { min-width: 120px; }
+
+  /* View mode toggle */
+  .view-toggle {
+    display: flex;
+    gap: 4px;
+    background: var(--paper-dark);
+    padding: 4px;
+    border: 1px solid var(--line);
+    margin-bottom: 16px;
+  }
+  .view-tab {
+    flex: 1;
+    padding: 9px 12px;
+    background: transparent;
+    border: none;
+    font-family: 'Oswald', sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: all 0.12s;
+    font-weight: 500;
+  }
+  .view-tab:hover { color: var(--navy); }
+  .view-tab.active {
+    background: var(--navy);
+    color: var(--gold-bright);
+  }
+  .view-tab .vt-dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: -1px;
+  }
+  .view-tab .vt-dot.first { background: var(--rdo); }
+  .view-tab .vt-dot.second { background: #d97a3d; }
+
+  .rdo-info {
+    background: var(--navy);
+    color: var(--paper);
+    padding: 14px 20px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .rdo-info .info-block {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .rdo-info .stat {
+    font-family: 'Oswald', sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .rdo-info .stat .num {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--gold-bright);
+    margin-right: 4px;
+  }
+  .rdo-info .stat .stat-label-prefix {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: -1px;
+  }
+  .rdo-info .stat .stat-label-prefix.first { background: var(--rdo-light); }
+  .rdo-info .stat .stat-label-prefix.second { background: #e88a4d; }
+  .rdo-info .stat.warn .num { color: #ff8a65; }
+  .rdo-info .stat.ok .num { color: #8fdc8e; }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .swatch {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--line);
+    text-align: center;
+    line-height: 20px;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+  }
+  .swatch.wide {
+    width: 34px;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+  }
+  .swatch.work { background: white; }
+  .swatch.rdo { background: var(--rdo); color: white; border-color: var(--rdo); }
+  .swatch.vac { background: var(--vac); color: white; border-color: var(--vac); }
+  .swatch.rdo2 { background: #d97a3d; color: white; border-color: #d97a3d; }
+  .swatch.vac2 { background: #6b3a1f; color: white; border-color: #6b3a1f; }
+  .swatch.split {
+    background: linear-gradient(to bottom, var(--rdo) 50%, #d97a3d 50%);
+    color: white;
+    border-color: var(--ink-soft);
+  }
+  .swatch.holiday {
+    background: white;
+    color: #b8941f;
+    font-weight: 700;
+  }
+  .swatch.fed-holiday {
+    background: white;
+    color: var(--ink-soft);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 16px;
+  }
+  .day-head {
+    background: var(--navy-deep);
+    color: var(--gold-bright);
+    text-align: center;
+    padding: 8px 4px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .day {
+    aspect-ratio: 1 / 1;
+    background: white;
+    border: 1px solid var(--line);
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    padding: 6px 8px;
+    transition: all 0.1s ease;
+    position: relative;
+    min-height: 64px;
+    overflow: hidden;
+  }
+  .day:hover {
+    border-color: var(--navy);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(10, 31, 61, 0.15);
+  }
+  .day.weekend { background: var(--weekend); }
+  .day .date {
+    font-size: 11px;
+    color: var(--ink-soft);
+    font-weight: 500;
+    position: relative;
+    z-index: 2;
+  }
+  .day .num {
+    font-family: 'Oswald', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-top: 2px;
+    position: relative;
+    z-index: 2;
+  }
+  .day .mark {
+    position: absolute;
+    bottom: 4px;
+    right: 6px;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    z-index: 2;
+  }
+  /* Holiday $ icon in top-right corner */
+  .day .holiday-mark {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: #b8941f;
+    z-index: 3;
+    line-height: 1;
+    text-shadow: 0 0 2px white, 0 0 2px white;
+  }
+
+  /* Diagonal holiday name across cell */
+  .day .holiday-name {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 1;
+    font-family: 'Oswald', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(184, 148, 31, 0.55);
+    transform: rotate(-22deg);
+    text-shadow: 0 0 3px rgba(255, 255, 255, 0.9);
+    text-align: center;
+    line-height: 1.05;
+    overflow: hidden;
+    padding: 0 2px;
+  }
+  /* Federal-only holidays (not paid) get a subtler color */
+  .day.is-holiday:not(.is-paid-holiday) .holiday-name {
+    color: rgba(74, 74, 74, 0.45);
+  }
+  /* When a state fill is on, brighten so it's still legible over color */
+  .day.s1-rdo .holiday-name, .day.s2-rdo .holiday-name,
+  .day.s1-vac .holiday-name, .day.s2-vac .holiday-name {
+    color: rgba(255, 255, 255, 0.55);
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.4);
+  }
+  .day.s1-rdo .holiday-mark, .day.s2-rdo .holiday-mark,
+  .day.s1-vac .holiday-mark, .day.s2-vac .holiday-mark {
+    color: #ffd966;
+    text-shadow: 0 0 2px rgba(0,0,0,0.5);
+  }
+
+  /* Color layers: cells use background layers for split rendering */
+  .day .layer-1, .day .layer-2 {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .day .layer-1 { top: 0; bottom: 0; }
+  .day .layer-2 { top: 0; bottom: 0; }
+
+  /* SINGLE VIEW (1st only or 2nd only) — existing single-fill states */
+  .day.v-1.s1-rdo, .day.v-2.s2-rdo  { background: var(--rdo); border-color: var(--rdo); }
+  .day.v-1.s1-vac { background: var(--vac); border-color: var(--vac); }
+  .day.v-2.s2-rdo { background: #d97a3d; border-color: #d97a3d; }
+  .day.v-2.s2-vac { background: #6b3a1f; border-color: #6b3a1f; }
+
+  .day.v-1.s1-rdo .date, .day.v-1.s1-rdo .num, .day.v-1.s1-rdo .mark,
+  .day.v-1.s1-vac .date, .day.v-1.s1-vac .num, .day.v-1.s1-vac .mark,
+  .day.v-2.s2-rdo .date, .day.v-2.s2-rdo .num, .day.v-2.s2-rdo .mark,
+  .day.v-2.s2-vac .date, .day.v-2.s2-vac .num, .day.v-2.s2-vac .mark
+    { color: white; }
+
+  /* BOTH VIEW — split top half = state1, bottom half = state2 */
+  .day.v-both .layer-1 { top: 0; bottom: 50%; }
+  .day.v-both .layer-2 { top: 50%; bottom: 0; }
+  .day.v-both .layer-1.fill-rdo { background: var(--rdo); }
+  .day.v-both .layer-1.fill-vac { background: var(--vac); }
+  .day.v-both .layer-2.fill-rdo { background: #d97a3d; }
+  .day.v-both .layer-2.fill-vac { background: #6b3a1f; }
+
+  .day.v-both .num { font-size: 16px; }
+  .day.v-both .num.has-fill { color: white; }
+  .day.v-both .date.has-fill { color: rgba(255,255,255,0.85); }
+
+  .day.v-both .mark-1 {
+    position: absolute;
+    top: 18px;
+    right: 6px;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    color: white;
+    z-index: 2;
+    letter-spacing: 0.04em;
+    display: none;
+  }
+  .day.v-both .mark-2 {
+    position: absolute;
+    bottom: 4px;
+    right: 6px;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    color: white;
+    z-index: 2;
+    letter-spacing: 0.04em;
+    display: none;
+  }
+  .day.v-both .mark { display: none; }
+  .day.v-both.s1-rdo .mark-1, .day.v-both.s1-vac .mark-1,
+  .day.v-both.s2-rdo .mark-2, .day.v-both.s2-vac .mark-2 { display: block; }
+
+  /* Hover highlight for click halves (both view only) */
+  .day.v-both .half-hint-top, .day.v-both .half-hint-bot {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .day.v-both .half-hint-top { top: 0; bottom: 50%; background: rgba(10, 31, 61, 0.08); }
+  .day.v-both .half-hint-bot { top: 50%; bottom: 0; background: rgba(217, 122, 61, 0.12); }
+  .day.v-both:hover .half-hint-top { opacity: 0; }
+  .day.v-both .day-half-top:hover ~ .half-hint-top { opacity: 1; }
+
+  /* Click target halves (invisible, inside both-view cells) */
+  .day-half-top, .day-half-bot {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 4;
+    cursor: pointer;
+  }
+  .day-half-top { top: 0; height: 50%; }
+  .day-half-bot { top: 50%; bottom: 0; }
+
+  /* ===== ACTIONS ===== */
+  .actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+  }
+  .btn {
+    padding: 12px 28px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 2px solid var(--navy);
+    background: white;
+    color: var(--navy);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-weight: 500;
+  }
+  .btn:hover { background: var(--paper-dark); }
+  .btn.primary {
+    background: var(--navy);
+    color: white;
+  }
+  .btn.primary:hover {
+    background: var(--navy-deep);
+    border-color: var(--navy-deep);
+  }
+  .btn.primary:disabled {
+    background: var(--line);
+    border-color: var(--line);
+    color: var(--ink-soft);
+    cursor: not-allowed;
+  }
+  .btn.ghost {
+    border-color: var(--line);
+    color: var(--ink-soft);
+  }
+
+  .hidden { display: none !important; }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--navy);
+    color: white;
+    padding: 14px 24px;
+    border-left: 4px solid var(--gold);
+    font-size: 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    transition: transform 0.3s ease;
+    z-index: 100;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.error { border-left-color: #ff6b35; }
+
+  @media (max-width: 720px) {
+    .wrap { padding: 12px 10px 60px; }
+    header { padding: 18px 18px; }
+    .title-block h1 { font-size: 22px; }
+    .picker { padding: 16px; }
+    .card { padding: 18px; }
+    .field-grid { grid-template-columns: 1fr; }
+    .field-grid.four-col { grid-template-columns: 1fr 1fr; }
+    .day { min-height: 52px; padding: 4px 5px; }
+    .day .num { font-size: 16px; }
+    .day .date { font-size: 10px; }
+    .day .mark { font-size: 13px; bottom: 2px; right: 4px; }
+    .day-head { font-size: 9px; padding: 6px 2px; letter-spacing: 0.08em; }
+    .mode-btn { flex: 1; padding: 10px 12px; font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="badge-row">
+      <svg class="shield" viewBox="0 0 52 60" xmlns="http://www.w3.org/2000/svg">
+        <path d="M26 2 L48 10 L48 32 Q48 48 26 58 Q4 48 4 32 L4 10 Z" stroke="#e6c478" stroke-width="1.5" fill="#0a1f3d"/>
+        <path d="M26 6 L44 12 L44 32 Q44 46 26 54 Q8 46 8 32 L8 12 Z" fill="none" stroke="#c9a961" stroke-width="1"/>
+        <text x="26" y="28" text-anchor="middle" font-family="Oswald, sans-serif" font-weight="700" font-size="11" fill="#c9a961" letter-spacing="0.5">LAXPD</text>
+        <text x="26" y="42" text-anchor="middle" font-family="Oswald, sans-serif" font-weight="600" font-size="7" fill="#c9a961" letter-spacing="0.5">BID</text>
+      </svg>
+      <div class="title-block">
+        <h1>Watch &amp; RDO Bid</h1>
+        <div class="subtitle">Los Angeles Airport Police</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="picker">
+    <span class="picker-label">Bid Type:</span>
+    <button class="mode-btn active" data-mode="watch" type="button">Watch Bid</button>
+    <button class="mode-btn" data-mode="rdo" type="button">RDO Bid</button>
+  </div>
+
+  <!-- ===== WATCH BID FORM ===== -->
+  <section id="watch-form" class="card">
+    <div class="card-title">Watch Assignment Bid</div>
+
+    <div class="field-grid four-col">
+      <div class="field">
+        <label for="w-name">Officer Name</label>
+        <input type="text" id="w-name" placeholder="Last, First M." autocomplete="name">
+      </div>
+      <div class="field">
+        <label for="w-curwatch">Current Watch</label>
+        <select id="w-curwatch">
+          <option value="">—</option>
+          <option value="1">Watch 1</option>
+          <option value="2">Watch 2</option>
+          <option value="3">Watch 3</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="w-serial">Serial Number</label>
+        <input type="text" id="w-serial" placeholder="e.g. 12345 or 00375" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label for="w-rank">Rank</label>
+        <select id="w-rank">
+          <option value="Officer">Officer</option>
+          <option value="Sergeant">Sergeant</option>
+        </select>
+      </div>
+      <div class="field full">
+        <label for="w-startdp">Bid Period (3 DPs)</label>
+        <select id="w-startdp"></select>
+      </div>
+    </div>
+
+    <div class="dp-range" id="w-range">
+      <strong>Bid Period:</strong>
+      <div class="dp-range-list" id="w-range-list">—</div>
+    </div>
+
+    <label style="display:block; margin-bottom: 10px;">Requested Watch Assignment (entire 3-DP period)</label>
+
+    <div class="watch-options">
+      <div class="watch-opt" data-w="1">
+        <div class="w-num">1</div>
+        <div class="w-label">Watch One</div>
+        <div class="w-status">— Not Selected —</div>
+      </div>
+      <div class="watch-opt" data-w="2">
+        <div class="w-num">2</div>
+        <div class="w-label">Watch Two</div>
+        <div class="w-status">— Not Selected —</div>
+      </div>
+      <div class="watch-opt" data-w="3">
+        <div class="w-num">3</div>
+        <div class="w-label">Watch Three</div>
+        <div class="w-status">— Not Selected —</div>
+      </div>
+    </div>
+
+    <div class="field full" style="margin-top: 24px;">
+      <label for="w-notes">Comments / Special Considerations (optional)</label>
+      <input type="text" id="w-notes" placeholder="e.g. seniority date, training assignment, etc.">
+    </div>
+
+    <div class="actions">
+      <button class="btn ghost" type="button" onclick="forgetOfficer()">Forget My Info</button>
+      <button class="btn ghost" type="button" onclick="resetWatch()">Reset</button>
+      <button class="btn primary" type="button" id="w-submit" onclick="generateWatchPDF()">Generate PDF</button>
+    </div>
+  </section>
+
+  <!-- ===== RDO BID FORM ===== -->
+  <section id="rdo-form" class="card hidden">
+    <div class="card-title">RDO Bid</div>
+
+    <div class="rdo-controls">
+      <div class="field" style="flex:1; min-width: 200px;">
+        <label for="r-name">Officer Name</label>
+        <input type="text" id="r-name" placeholder="Last, First M.">
+      </div>
+      <div class="field">
+        <label for="r-serial">Serial Number</label>
+        <input type="text" id="r-serial" placeholder="12345 or 00375" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label for="r-watch">Watch</label>
+        <select id="r-watch">
+          <option value="1">Watch 1</option>
+          <option value="2">Watch 2</option>
+          <option value="3">Watch 3</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="rdo-controls" style="background: var(--paper-dark); padding: 14px; margin: 0 -8px 16px; border: 1px solid var(--line);">
+      <label class="include-toggle" style="margin-right: 14px;">
+        <input type="checkbox" id="r-match-watch" checked>
+        <span style="font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600;">Match Watch Bid Period</span>
+      </label>
+      <div class="field" id="r-startdp-wrap">
+        <label for="r-startdp">Starting DP</label>
+        <select id="r-startdp"></select>
+      </div>
+    </div>
+
+    <div id="rdo-slots"></div>
+
+    <div class="actions">
+      <button class="btn ghost" type="button" onclick="resetRDO()">Reset All Days</button>
+      <button class="btn primary" type="button" onclick="generateRDOPDF()">Generate PDF</button>
+    </div>
+  </section>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   DP CALENDAR
+   Anchor: DP7 = Sunday, June 28, 2026
+   13 DPs per year × 28 days = 364 days
+   ============================================================ */
+const DP_ANCHOR = { dp: 7, year: 2026, start: new Date(2026, 5, 28) };
+
+function getDPInfo(dpNum, year) {
+  const yearDiff = year - DP_ANCHOR.year;
+  const dpDiff = (dpNum - DP_ANCHOR.dp) + (yearDiff * 13);
+  const start = new Date(DP_ANCHOR.start);
+  start.setDate(start.getDate() + dpDiff * 28);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 27);
+  return {
+    dp: dpNum,
+    year: year,
+    start: start,
+    end: end,
+    label: `DP ${dpNum} ${year}`
+  };
+}
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function fmtDate(d) {
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+function fmtMDY(d) {
+  return `${d.getMonth()+1}/${d.getDate()}/${String(d.getFullYear()).slice(-2)}`;
+}
+function fmtDateLong(d) {
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  return `${days[d.getDay()]}, ${MONTHS_FULL[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
+/* ============================================================
+   POPULATE DP DROPDOWNS
+   ============================================================ */
+
+// Watch form: group DPs into triples starting from DP7 of the anchor year
+function buildWatchDPOptions(selectEl) {
+  selectEl.innerHTML = '';
+  const now = new Date();
+  // Generate triples from DP7/2026 forward across multiple years
+  // Walk DP/year forward, emitting one option per group of 3
+  const triples = [];
+  let dp = DP_ANCHOR.dp;   // 7
+  let yr = DP_ANCHOR.year; // 2026
+  for (let i = 0; i < 16; i++) { // 16 triples ≈ ~3.7 years of coverage
+    const group = [];
+    for (let j = 0; j < 3; j++) {
+      group.push(getDPInfo(dp, yr));
+      dp += 1;
+      if (dp > 13) { dp = 1; yr += 1; }
+    }
+    triples.push(group);
+  }
+  triples.forEach(g => {
+    // skip groups whose final DP ended before today
+    if (g[2].end < now) return;
+    const opt = document.createElement('option');
+    opt.value = `${g[0].dp}-${g[0].year}`;
+    opt.textContent = `DP ${g[0].dp}–${g[2].dp} • ${g[0].year}${g[2].year !== g[0].year ? '/' + g[2].year : ''} (${fmtDate(g[0].start)} – ${fmtDate(g[2].end)})`;
+    selectEl.appendChild(opt);
+  });
+  // default to first option (which will be the current/upcoming triple)
+  if (selectEl.options.length > 0) selectEl.selectedIndex = 0;
+}
+
+// RDO form: list every DP individually
+function buildDPOptions(selectEl) {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const years = [currentYear, currentYear + 1];
+  selectEl.innerHTML = '';
+  years.forEach(year => {
+    for (let dp = 1; dp <= 13; dp++) {
+      const info = getDPInfo(dp, year);
+      if (info.end < now && !(year === currentYear && dp >= 1)) continue;
+      const opt = document.createElement('option');
+      opt.value = `${dp}-${year}`;
+      opt.textContent = `DP ${dp} • ${year} (${fmtDate(info.start)} – ${fmtDate(info.end)})`;
+      if (year === DP_ANCHOR.year && dp === DP_ANCHOR.dp) opt.selected = true;
+      selectEl.appendChild(opt);
+    }
+  });
+}
+
+const wStartDP = document.getElementById('w-startdp');
+buildWatchDPOptions(wStartDP);
+
+/* ============================================================
+   MASTER PICKER
+   ============================================================ */
+const watchForm = document.getElementById('watch-form');
+const rdoForm = document.getElementById('rdo-form');
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (btn.dataset.mode === 'watch') {
+      watchForm.classList.remove('hidden');
+      rdoForm.classList.add('hidden');
+    } else {
+      watchForm.classList.add('hidden');
+      rdoForm.classList.remove('hidden');
+    }
+  });
+});
+
+/* ============================================================
+   WATCH FORM — DP RANGE DISPLAY
+   ============================================================ */
+const wRangeList = document.getElementById('w-range-list');
+function updateWatchRange() {
+  const [dp, yr] = wStartDP.value.split('-').map(Number);
+  const dps = [];
+  for (let i = 0; i < 3; i++) {
+    let curDP = dp + i;
+    let curYr = yr;
+    if (curDP > 13) { curDP -= 13; curYr += 1; }
+    dps.push(getDPInfo(curDP, curYr));
+  }
+  const rangeStr = `${fmtDate(dps[0].start)} through ${fmtDate(dps[2].end)}`;
+  wRangeList.innerHTML = `${rangeStr}<br><span style="font-size:12px;">DP ${dps[0].dp}/${dps[0].year} • DP ${dps[1].dp}/${dps[1].year} • DP ${dps[2].dp}/${dps[2].year}</span>`;
+}
+wStartDP.addEventListener('change', updateWatchRange);
+updateWatchRange();
+
+/* ============================================================
+   WATCH 1ST / 2ND CHOICE PICKER
+   Each button cycles its own state: off → 1st → 2nd → off.
+   Setting a watch to 1st bumps any other watch currently at 1st to off.
+   Same rule for 2nd.
+   ============================================================ */
+// State: { c1: <watch# or null>, c2: <watch# or null> }
+const watchState = { c1: null, c2: null };
+
+document.querySelectorAll('.watch-opt').forEach(opt => {
+  opt.addEventListener('click', () => {
+    const w = +opt.dataset.w;
+    const cur = (watchState.c1 === w) ? '1' : (watchState.c2 === w) ? '2' : 'off';
+
+    if (cur === 'off') {
+      // Off → take the next open slot.
+      // No 1st? become 1st. Else become 2nd (bumping any existing 2nd off).
+      if (watchState.c1 == null) {
+        watchState.c1 = w;
+      } else {
+        watchState.c2 = w;
+      }
+    } else if (cur === '1') {
+      // 1st → demote to 2nd; bump any prior 2nd off.
+      watchState.c1 = null;
+      watchState.c2 = w;
+    } else { // cur === '2'
+      // 2nd: if a 1st exists elsewhere, promote this to 1st (and turn that off).
+      // Else turn off.
+      if (watchState.c1 != null) {
+        watchState.c1 = w;
+        watchState.c2 = null;
+      } else {
+        watchState.c2 = null;
+      }
+    }
+
+    paintWatchPicker();
+  });
+});
+
+function paintWatchPicker() {
+  document.querySelectorAll('.watch-opt').forEach(opt => {
+    const w = +opt.dataset.w;
+    opt.classList.remove('c-1', 'c-2');
+    const status = opt.querySelector('.w-status');
+    if (watchState.c1 === w) {
+      opt.classList.add('c-1');
+      status.textContent = '1ST CHOICE';
+    } else if (watchState.c2 === w) {
+      opt.classList.add('c-2');
+      status.textContent = '2ND CHOICE';
+    } else {
+      status.textContent = '— Not Selected —';
+    }
+  });
+}
+
+paintWatchPicker();
+
+/* ============================================================
+   SERIAL NUMBER — 5 numeric digits, leading zeros allowed
+   ============================================================ */
+function setupSerialField(inputEl) {
+  inputEl.setAttribute('inputmode', 'numeric');
+  inputEl.setAttribute('pattern', '[0-9]{5}');
+  inputEl.setAttribute('maxlength', '5');
+  inputEl.addEventListener('input', () => {
+    // strip non-digits, cap at 5
+    const cleaned = inputEl.value.replace(/\D/g, '').slice(0, 5);
+    if (inputEl.value !== cleaned) inputEl.value = cleaned;
+  });
+}
+setupSerialField(document.getElementById('w-serial'));
+setupSerialField(document.getElementById('r-serial'));
+
+function resetWatch() {
+  // Keep officer info (name/serial/rank/current watch) since it's now sticky.
+  // Only clear bid-specific fields: notes and the 1st/2nd choice picks.
+  document.getElementById('w-notes').value = '';
+  watchState.c1 = null;
+  watchState.c2 = null;
+  paintWatchPicker();
+}
+
+/* ============================================================
+   RDO BID — multi-DP slot model
+   3 slots positioned 2-4 in the page layout.
+   Each slot: { include, view, days[28] each with state1/state2 }
+   ============================================================ */
+
+const rdoSlots = [
+  { view: '1', days: [] },
+  { view: '1', days: [] },
+  { view: '1', days: [] }
+];
+
+// Holiday helpers (same as before)
+function easterDate(year) {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const L = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * L) / 451);
+  const month = Math.floor((h + L - 7 * m + 114) / 31);
+  const day = ((h + L - 7 * m + 114) % 31) + 1;
+  return new Date(year, month - 1, day);
+}
+function nthWeekdayOfMonth(year, month, weekday, n) {
+  if (n > 0) {
+    const d = new Date(year, month, 1);
+    const offset = (weekday - d.getDay() + 7) % 7;
+    d.setDate(1 + offset + (n - 1) * 7);
+    return d;
+  } else {
+    const d = new Date(year, month + 1, 0);
+    const offset = (d.getDay() - weekday + 7) % 7;
+    d.setDate(d.getDate() - offset);
+    return d;
+  }
+}
+function getHolidaysForYear(year) {
+  const map = new Map();
+  const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const add = (d, name, paid) => map.set(fmt(d), { name, paid });
+  // MOU 30/39 paid holidays
+  add(new Date(year, 0, 1), "New Year's Day", true);
+  add(easterDate(year), "Easter Sunday", true);
+  add(nthWeekdayOfMonth(year, 4, 1, -1), "Memorial Day", true);
+  add(new Date(year, 5, 19), "Juneteenth", true);
+  add(new Date(year, 6, 4), "Independence Day", true);
+  add(nthWeekdayOfMonth(year, 8, 1, 1), "Labor Day", true);
+  add(new Date(year, 10, 11), "Veteran's Day", true);
+  add(nthWeekdayOfMonth(year, 10, 4, 4), "Thanksgiving Day", true);
+  add(new Date(year, 11, 24), "Christmas Eve", true);
+  add(new Date(year, 11, 25), "Christmas Day", true);
+  add(new Date(year, 11, 31), "New Year's Eve", true);
+  // Federal-only
+  add(nthWeekdayOfMonth(year, 0, 1, 3), "MLK Jr. Day", false);
+  add(nthWeekdayOfMonth(year, 1, 1, 3), "Presidents' Day", false);
+  add(nthWeekdayOfMonth(year, 9, 1, 2), "Columbus Day", false);
+  return map;
+}
+const holidayCache = new Map();
+function holidayFor(d) {
+  const yr = d.getFullYear();
+  if (!holidayCache.has(yr)) holidayCache.set(yr, getHolidaysForYear(yr));
+  const key = `${yr}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return holidayCache.get(yr).get(key) || null;
+}
+
+/* ============================================================
+   Determining which DP each slot represents
+   When "Match Watch Bid Period" is on (default), slot N = watch starting DP + N
+   When off, RDO uses its own r-startdp dropdown
+   ============================================================ */
+const rMatchWatch = document.getElementById('r-match-watch');
+const rStartDP = document.getElementById('r-startdp');
+const rStartDPWrap = document.getElementById('r-startdp-wrap');
+
+function buildRDOStartDPOptions() {
+  // Reuse the watch DP triple grouping
+  buildWatchDPOptions(rStartDP);
+}
+buildRDOStartDPOptions();
+
+function getRDOStartDP() {
+  if (rMatchWatch.checked) {
+    const [dp, yr] = wStartDP.value.split('-').map(Number);
+    return { dp, year: yr };
+  } else {
+    const [dp, yr] = rStartDP.value.split('-').map(Number);
+    return { dp, year: yr };
+  }
+}
+
+function getRDOSlotDP(slot) {
+  let { dp, year } = getRDOStartDP();
+  for (let i = 0; i < slot; i++) ({ dp, year } = nextDP(dp, year));
+  return getDPInfo(dp, year);
+}
+
+function nextDP(dp, yr) {
+  let d = dp + 1, y = yr;
+  if (d > 13) { d = 1; y += 1; }
+  return { dp: d, year: y };
+}
+
+rMatchWatch.addEventListener('change', () => {
+  rStartDPWrap.style.display = rMatchWatch.checked ? 'none' : '';
+  buildAllSlots();
+});
+rStartDP.addEventListener('change', buildAllSlots);
+// Sync RDO when watch DP changes (only when matching)
+wStartDP.addEventListener('change', () => {
+  if (rMatchWatch.checked) buildAllSlots();
+});
+// Initialize: hide r-startdp by default since match-watch is on
+rStartDPWrap.style.display = 'none';
+
+/* ============================================================
+   Build the per-slot RDO panels
+   ============================================================ */
+const rdoSlotsEl = document.getElementById('rdo-slots');
+
+function buildAllSlots() {
+  rdoSlotsEl.innerHTML = '';
+  for (let s = 0; s < 3; s++) {
+    rdoSlotsEl.appendChild(buildSlotPanel(s));
+  }
+}
+
+function buildSlotPanel(slotIdx) {
+  const info = getRDOSlotDP(slotIdx);
+  const slot = rdoSlots[slotIdx];
+
+  // Initialize day data for this slot (preserve existing if same DP)
+  const desiredFirstDate = info.start.toDateString();
+  const existingFirstDate = slot.days[0] ? slot.days[0].date.toDateString() : null;
+  if (desiredFirstDate !== existingFirstDate) {
+    slot.days = [];
+    for (let i = 0; i < 28; i++) {
+      const d = new Date(info.start);
+      d.setDate(d.getDate() + i);
+      slot.days.push({ date: d, state1: 'work', state2: 'work', holiday: holidayFor(d) });
+    }
+  }
+
+  const slotEl = document.createElement('div');
+  slotEl.className = 'rdo-slot';
+  slotEl.dataset.slot = slotIdx;
+  slotEl.innerHTML = `
+    <div class="rdo-slot-head">
+      <span class="slot-label">DP ${info.dp}</span>
+      <span class="slot-dp"><span>${info.year}</span> &nbsp; ${fmtDate(info.start)} – ${fmtDate(info.end)}</span>
+    </div>
+    <div class="rdo-slot-body">
+      <div class="view-toggle" data-slot="${slotIdx}">
+        <button type="button" class="view-tab ${slot.view === '1' ? 'active' : ''}" data-view="1"><span class="vt-dot first"></span>1st Choice</button>
+        <button type="button" class="view-tab ${slot.view === '2' ? 'active' : ''}" data-view="2"><span class="vt-dot second"></span>2nd Choice</button>
+        <button type="button" class="view-tab ${slot.view === 'both' ? 'active' : ''}" data-view="both">Both</button>
+      </div>
+      <div class="rdo-info">
+        <div class="info-block">
+          <div class="stat stat-rdo1"><span class="stat-label-prefix first"></span><span class="num">0</span>/12 RDO (1st)</div>
+          <div class="stat stat-rdo2"><span class="stat-label-prefix second"></span><span class="num">0</span>/12 RDO (2nd)</div>
+          <div class="stat"><span class="num stat-vac">0/0</span>VC (1st/2nd)</div>
+        </div>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><span class="swatch rdo wide">RDO</span>1st RDO</div>
+        <div class="legend-item"><span class="swatch vac">VC</span>1st Vac</div>
+        <div class="legend-item"><span class="swatch rdo2 wide">RDO</span>2nd RDO</div>
+        <div class="legend-item"><span class="swatch vac2">VC</span>2nd Vac</div>
+        <div class="legend-item"><span class="swatch holiday">$</span>MOU 30/39 Paid Holiday</div>
+        <div class="legend-item"><span class="swatch fed-holiday">FED</span>Federal (unpaid)</div>
+      </div>
+      <div class="calendar">
+        <div class="day-head">Sun</div>
+        <div class="day-head">Mon</div>
+        <div class="day-head">Tue</div>
+        <div class="day-head">Wed</div>
+        <div class="day-head">Thu</div>
+        <div class="day-head">Fri</div>
+        <div class="day-head">Sat</div>
+      </div>
+    </div>
+  `;
+
+  // Wire view tabs
+  slotEl.querySelectorAll('.view-toggle .view-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      slotEl.querySelectorAll('.view-toggle .view-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      slot.view = tab.dataset.view;
+      applyViewClass(slotIdx);
+    });
+  });
+
+  // Build day cells
+  const calendar = slotEl.querySelector('.calendar');
+  slot.days.forEach((cd, idx) => {
+    const cell = document.createElement('div');
+    const dow = cd.date.getDay();
+    cell.className = 'day';
+    if (dow === 0 || dow === 6) cell.classList.add('weekend');
+    if (cd.holiday) {
+      cell.classList.add('is-holiday');
+      if (cd.holiday.paid) cell.classList.add('is-paid-holiday');
+    }
+    cell.dataset.idx = idx;
+    const showDollar = cd.holiday && cd.holiday.paid;
+    cell.innerHTML = `
+      <div class="layer-1"></div>
+      <div class="layer-2"></div>
+      <div class="date">${MONTHS[cd.date.getMonth()]}</div>
+      <div class="num">${cd.date.getDate()}</div>
+      <div class="mark"></div>
+      <div class="mark-1"></div>
+      <div class="mark-2"></div>
+      ${showDollar ? `<div class="holiday-mark" title="${cd.holiday.name} (paid)">$</div>` : ''}
+      ${cd.holiday ? `<div class="holiday-name" title="${cd.holiday.name}">${cd.holiday.name}</div>` : ''}
+      <div class="day-half-top" title="1st choice"></div>
+      <div class="day-half-bot" title="2nd choice"></div>
+    `;
+    cell.querySelector('.day-half-top').addEventListener('click', e => {
+      e.stopPropagation();
+      const v = slot.view;
+      if (v === '1' || v === 'both') cycleDay(slotIdx, idx, 1);
+      else cycleDay(slotIdx, idx, 2);
+    });
+    cell.querySelector('.day-half-bot').addEventListener('click', e => {
+      e.stopPropagation();
+      const v = slot.view;
+      if (v === '2' || v === 'both') cycleDay(slotIdx, idx, 2);
+      else cycleDay(slotIdx, idx, 1);
+    });
+    calendar.appendChild(cell);
+  });
+
+  // Apply view class & paint after a microtask so the element exists in DOM
+  setTimeout(() => {
+    applyViewClass(slotIdx);
+    updateStats(slotIdx);
+  }, 0);
+
+  return slotEl;
+}
+
+function cycleDay(slotIdx, idx, choice) {
+  const cd = rdoSlots[slotIdx].days[idx];
+  const key = (choice === 1) ? 'state1' : 'state2';
+  const cur = cd[key];
+  if (cur === 'work') cd[key] = 'rdo';
+  else if (cur === 'rdo') cd[key] = 'vac';
+  else cd[key] = 'work';
+  refreshDayCell(slotIdx, idx);
+  updateStats(slotIdx);
+}
+
+function refreshDayCell(slotIdx, idx) {
+  const slotEl = rdoSlotsEl.querySelector(`.rdo-slot[data-slot="${slotIdx}"]`);
+  if (!slotEl) return;
+  const cell = slotEl.querySelector(`.day[data-idx="${idx}"]`);
+  if (!cell) return;
+  const cd = rdoSlots[slotIdx].days[idx];
+
+  cell.classList.remove('s1-rdo', 's1-vac', 's2-rdo', 's2-vac');
+  if (cd.state1 === 'rdo') cell.classList.add('s1-rdo');
+  if (cd.state1 === 'vac') cell.classList.add('s1-vac');
+  if (cd.state2 === 'rdo') cell.classList.add('s2-rdo');
+  if (cd.state2 === 'vac') cell.classList.add('s2-vac');
+
+  const l1 = cell.querySelector('.layer-1');
+  l1.className = 'layer-1';
+  if (cd.state1 === 'rdo') l1.classList.add('fill-rdo');
+  else if (cd.state1 === 'vac') l1.classList.add('fill-vac');
+  const l2 = cell.querySelector('.layer-2');
+  l2.className = 'layer-2';
+  if (cd.state2 === 'rdo') l2.classList.add('fill-rdo');
+  else if (cd.state2 === 'vac') l2.classList.add('fill-vac');
+
+  const symFor = (s) => s === 'rdo' ? 'RDO' : (s === 'vac' ? 'VC' : '');
+  const v = rdoSlots[slotIdx].view;
+  cell.querySelector('.mark').textContent =
+    v === '1' ? symFor(cd.state1) :
+    v === '2' ? symFor(cd.state2) : '';
+  cell.querySelector('.mark-1').textContent = symFor(cd.state1);
+  cell.querySelector('.mark-2').textContent = symFor(cd.state2);
+
+  const num = cell.querySelector('.num');
+  const date = cell.querySelector('.date');
+  const hasFill = cd.state1 !== 'work' || cd.state2 !== 'work';
+  num.classList.toggle('has-fill', hasFill);
+  date.classList.toggle('has-fill', hasFill);
+}
+
+function applyViewClass(slotIdx) {
+  const slotEl = rdoSlotsEl.querySelector(`.rdo-slot[data-slot="${slotIdx}"]`);
+  if (!slotEl) return;
+  const v = rdoSlots[slotIdx].view;
+  slotEl.querySelectorAll('.day').forEach(cell => {
+    cell.classList.remove('v-1', 'v-2', 'v-both');
+    if (v === '1') cell.classList.add('v-1');
+    else if (v === '2') cell.classList.add('v-2');
+    else cell.classList.add('v-both');
+  });
+  rdoSlots[slotIdx].days.forEach((_, i) => refreshDayCell(slotIdx, i));
+}
+
+function updateStats(slotIdx) {
+  const slotEl = rdoSlotsEl.querySelector(`.rdo-slot[data-slot="${slotIdx}"]`);
+  if (!slotEl) return;
+  const days = rdoSlots[slotIdx].days;
+  const o1 = days.filter(d => d.state1 === 'rdo').length;
+  const v1 = days.filter(d => d.state1 === 'vac').length;
+  const o2 = days.filter(d => d.state2 === 'rdo').length;
+  const v2 = days.filter(d => d.state2 === 'vac').length;
+  const stat1 = slotEl.querySelector('.stat-rdo1');
+  stat1.querySelector('.num').textContent = o1;
+  stat1.classList.toggle('warn', o1 !== 0 && o1 !== 12);
+  stat1.classList.toggle('ok', o1 === 12);
+  const stat2 = slotEl.querySelector('.stat-rdo2');
+  stat2.querySelector('.num').textContent = o2;
+  stat2.classList.toggle('warn', o2 !== 0 && o2 !== 12);
+  stat2.classList.toggle('ok', o2 === 12);
+  slotEl.querySelector('.stat-vac').textContent = `${v1}/${v2}`;
+}
+
+function resetRDO() {
+  rdoSlots.forEach(slot => {
+    slot.days.forEach(d => { d.state1 = 'work'; d.state2 = 'work'; });
+  });
+  rdoSlots.forEach((_, i) => {
+    rdoSlots[i].days.forEach((_, j) => refreshDayCell(i, j));
+    updateStats(i);
+  });
+  toast('All RDO days cleared');
+}
+
+buildAllSlots();
+
+/* ============================================================
+   PERSIST OFFICER INFO ACROSS SESSIONS
+   Saves to localStorage so the form repopulates on next visit.
+   Synced fields: name, currentWatch, serial, rank
+   ============================================================ */
+const OFFICER_STORAGE_KEY = 'laapd-bid-officer-v1';
+
+function readOfficer() {
+  try {
+    const raw = localStorage.getItem(OFFICER_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+}
+
+function writeOfficer(patch) {
+  try {
+    const cur = readOfficer() || {};
+    const merged = { ...cur, ...patch };
+    localStorage.setItem(OFFICER_STORAGE_KEY, JSON.stringify(merged));
+  } catch (e) {
+    // localStorage may be unavailable (private browsing); silently fail
+  }
+}
+
+// Apply saved officer info to all relevant fields
+function applyOfficerToFields() {
+  const data = readOfficer();
+  if (!data) return;
+  const setIfEmpty = (id, val) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (val == null || val === '') return;
+    if (el.tagName === 'SELECT') {
+      // Only set if value is a valid option
+      const has = Array.from(el.options).some(o => o.value === val);
+      if (has) el.value = val;
+    } else {
+      el.value = val;
+    }
+  };
+  // Watch form
+  setIfEmpty('w-name', data.name);
+  setIfEmpty('w-curwatch', data.currentWatch);
+  setIfEmpty('w-serial', data.serial);
+  setIfEmpty('w-rank', data.rank);
+  // RDO form (uses same name/serial; r-watch maps to currentWatch)
+  setIfEmpty('r-name', data.name);
+  setIfEmpty('r-serial', data.serial);
+  setIfEmpty('r-watch', data.currentWatch);
+}
+
+// Wire up listeners that mirror changes between forms and persist.
+function wireOfficerSync() {
+  const fields = [
+    // [elementId, storageKey, mirrorIds]
+    ['w-name', 'name', ['r-name']],
+    ['r-name', 'name', ['w-name']],
+    ['w-serial', 'serial', ['r-serial']],
+    ['r-serial', 'serial', ['w-serial']],
+    ['w-curwatch', 'currentWatch', ['r-watch']],
+    ['r-watch', 'currentWatch', ['w-curwatch']],
+    ['w-rank', 'rank', []]
+  ];
+  fields.forEach(([id, key, mirrors]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const handler = () => {
+      const val = el.value;
+      writeOfficer({ [key]: val });
+      mirrors.forEach(mid => {
+        const m = document.getElementById(mid);
+        if (!m) return;
+        if (m.tagName === 'SELECT') {
+          const has = Array.from(m.options).some(o => o.value === val);
+          if (has) m.value = val;
+          else if (val === '') m.value = '';
+        } else {
+          m.value = val;
+        }
+      });
+    };
+    el.addEventListener('input', handler);
+    el.addEventListener('change', handler);
+  });
+}
+
+applyOfficerToFields();
+wireOfficerSync();
+
+function forgetOfficer() {
+  if (!confirm('Clear saved name, serial, rank, and watch from this device?')) return;
+  try { localStorage.removeItem(OFFICER_STORAGE_KEY); } catch (e) {}
+  ['w-name','w-serial','w-curwatch','w-rank','r-name','r-serial','r-watch'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.tagName === 'SELECT') {
+      // For w-curwatch, there's an empty option; for others we'll just default to first option
+      const empty = Array.from(el.options).find(o => o.value === '');
+      if (empty) el.value = '';
+      else if (id === 'w-rank') el.value = 'Officer';
+      else el.value = el.options[0].value;
+    } else {
+      el.value = '';
+    }
+  });
+  toast('Saved officer info cleared');
+}
+const toastEl = document.getElementById('toast');
+function toast(msg, isError) {
+  toastEl.textContent = msg;
+  toastEl.classList.toggle('error', !!isError);
+  toastEl.classList.add('show');
+  setTimeout(() => toastEl.classList.remove('show'), 3200);
+}
+
+/* ============================================================
+   PDF GENERATION
+   ============================================================ */
+const { jsPDF } = window.jspdf;
+
+function pdfHeader(doc, title) {
+  doc.setFillColor(10, 31, 61);
+  doc.rect(0, 0, 612, 70, 'F');
+  doc.setFillColor(201, 169, 97);
+  doc.rect(0, 70, 612, 4, 'F');
+  doc.setTextColor(245, 242, 235);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.text(title, 40, 36);
+  doc.setTextColor(230, 196, 120);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text('LOS ANGELES AIRPORT POLICE', 40, 54);
+  const stamp = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+  doc.setFontSize(8);
+  doc.setTextColor(230, 196, 120);
+  doc.text('Generated: ' + stamp, 612 - 40, 54, { align: 'right' });
+}
+
+function pdfFooter(doc) {
+  const ph = doc.internal.pageSize.getHeight();
+  doc.setDrawColor(201, 169, 97);
+  doc.setLineWidth(0.5);
+  doc.line(40, ph - 40, 612 - 40, ph - 40);
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.setFont('helvetica', 'italic');
+  doc.text('Officer signature acknowledges submission of this bid request.', 40, ph - 26);
+  doc.text('LAXPD Watch & RDO Bid System', 612 - 40, ph - 26, { align: 'right' });
+}
+
+function generateWatchPDF() {
+  const name = document.getElementById('w-name').value.trim();
+  const curWatch = document.getElementById('w-curwatch').value;
+  const serial = document.getElementById('w-serial').value.trim();
+  const rank = document.getElementById('w-rank').value;
+  const notes = document.getElementById('w-notes').value.trim();
+
+  if (!name) return toast('Officer name required', true);
+  if (!serial) return toast('Serial number required', true);
+  if (!/^\d{5}$/.test(serial)) return toast('Serial must be exactly 5 digits', true);
+  if (watchState.c1 == null && watchState.c2 == null) {
+    return toast('Select at least a 1st choice watch', true);
+  }
+
+  const [dp, yr] = wStartDP.value.split('-').map(Number);
+  const dps = [];
+  for (let i = 0; i < 3; i++) {
+    let curDP = dp + i;
+    let curYr = yr;
+    if (curDP > 13) { curDP -= 13; curYr += 1; }
+    dps.push(getDPInfo(curDP, curYr));
+  }
+
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+  pdfHeader(doc, 'WATCH ASSIGNMENT BID');
+
+  let y = 110;
+  doc.setTextColor(26, 26, 26);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text('OFFICER INFORMATION', 40, y);
+  doc.setDrawColor(201, 169, 97);
+  doc.line(40, y + 4, 240, y + 4);
+  y += 22;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  const labelWidth = 110;
+  const drawRow = (label, value) => {
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(80, 80, 80);
+    doc.text(label, 40, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(26, 26, 26);
+    doc.text(value || '—', 40 + labelWidth, y);
+    y += 20;
+  };
+  drawRow('Name:', `${name}${curWatch ? '  •  Currently Watch ' + curWatch : ''}`);
+  drawRow('Serial #:', serial);
+  drawRow('Rank:', rank);
+
+  y += 12;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(26, 26, 26);
+  doc.text('BID PERIOD (3 DEPLOYMENT PERIODS)', 40, y);
+  doc.line(40, y + 4, 280, y + 4);
+  y += 22;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(80, 80, 80);
+  doc.text(`${fmtDateLong(dps[0].start)}  through  ${fmtDateLong(dps[2].end)}`, 40, y);
+  y += 18;
+
+  const boxW = 165, boxH = 60, gap = 12;
+  let bx = 40;
+  dps.forEach((info) => {
+    doc.setDrawColor(180, 180, 180);
+    doc.setFillColor(245, 242, 235);
+    doc.rect(bx, y, boxW, boxH, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(10, 31, 61);
+    doc.text(`DP ${info.dp} • ${info.year}`, bx + boxW/2, y + 22, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(80, 80, 80);
+    doc.text(fmtDate(info.start), bx + boxW/2, y + 38, { align: 'center' });
+    doc.text('to ' + fmtDate(info.end), bx + boxW/2, y + 50, { align: 'center' });
+    bx += boxW + gap;
+  });
+  y += boxH + 24;
+
+  // ===== WATCH BID ROW (APD-086 style: left label + 1ST CHOICE | 2ND CHOICE boxes) =====
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(26, 26, 26);
+  doc.text('REQUESTED WATCH ASSIGNMENT', 40, y);
+  doc.line(40, y + 4, 250, y + 4);
+  y += 14;
+
+  const rowX = 40;
+  const rowW = 532;
+  const rowH = 90;
+  const labelW = 90;
+
+  // Left "WATCH BID" label panel
+  doc.setFillColor(10, 31, 61);
+  doc.rect(rowX, y, labelW, rowH, 'F');
+  doc.setTextColor(230, 196, 120);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text('WATCH', rowX + labelW / 2, y + rowH / 2 - 8, { align: 'center' });
+  doc.text('BID', rowX + labelW / 2, y + rowH / 2 + 10, { align: 'center' });
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(201, 169, 97);
+  doc.text('1ST / 2ND CHOICE', rowX + labelW / 2, y + rowH - 8, { align: 'center' });
+
+  // Right side: 1ST CHOICE | 2ND CHOICE split
+  const choiceX = rowX + labelW;
+  const choiceW = rowW - labelW;
+  const halfW = choiceW / 2;
+
+  // border
+  doc.setDrawColor(120, 120, 120);
+  doc.setLineWidth(0.7);
+  doc.rect(choiceX, y, choiceW, rowH);
+  doc.line(choiceX + halfW, y, choiceX + halfW, y + rowH);
+
+  // sub-header band
+  doc.setFillColor(245, 242, 235);
+  doc.rect(choiceX, y, choiceW, 16, 'F');
+  doc.setDrawColor(180, 180, 180);
+  doc.line(choiceX, y + 16, choiceX + choiceW, y + 16);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(120, 120, 120);
+  doc.text('1ST CHOICE', choiceX + halfW / 2, y + 11, { align: 'center' });
+  doc.text('2ND CHOICE', choiceX + halfW + halfW / 2, y + 11, { align: 'center' });
+
+  // Render the chosen watch numbers (or blank)
+  const renderChoice = (cx, cw, val) => {
+    if (val == null) return;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(46);
+    doc.setTextColor(10, 31, 61);
+    doc.text(String(val), cx + cw / 2, y + rowH - 18, { align: 'center' });
+  };
+  renderChoice(choiceX, halfW, watchState.c1);
+  renderChoice(choiceX + halfW, halfW, watchState.c2);
+
+  y += rowH + 20;
+
+  if (notes) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(26, 26, 26);
+    doc.text('COMMENTS', 40, y);
+    doc.setDrawColor(201, 169, 97);
+    doc.line(40, y + 4, 130, y + 4);
+    y += 16;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 60);
+    const wrapped = doc.splitTextToSize(notes, 530);
+    doc.text(wrapped, 40, y + 4);
+    y += wrapped.length * 13 + 10;
+  }
+
+  y = Math.max(y + 20, 660);
+  doc.setDrawColor(120, 120, 120);
+  doc.setLineWidth(0.7);
+  doc.line(40, y, 320, y);
+  doc.line(360, y, 540, y);
+  doc.setFontSize(9);
+  doc.setTextColor(100, 100, 100);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Officer Signature', 40, y + 14);
+  doc.text('Date', 360, y + 14);
+
+  pdfFooter(doc);
+
+  const safe = name.replace(/[^a-z0-9]+/gi, '_');
+  doc.save(`Watch_Bid_${safe}_DP${dps[0].dp}-${dps[2].dp}_${dps[0].year}.pdf`);
+  toast('Watch bid PDF generated');
+}
+
+function generateRDOPDF() {
+  const name = document.getElementById('r-name').value.trim();
+  const serial = document.getElementById('r-serial').value.trim();
+  const watch = document.getElementById('r-watch').value;
+  if (!name) return toast('Officer name required', true);
+  if (!serial) return toast('Serial number required', true);
+  if (!/^\d{5}$/.test(serial)) return toast('Serial must be exactly 5 digits', true);
+
+  // Validate: only check slots the user actually edited.
+  // For slots with any selection, both 1st and 2nd choices must have exactly 12 RDOs.
+  for (let s = 0; s < 3; s++) {
+    const slot = rdoSlots[s];
+    const hasAnySelection = slot.days.some(d => d.state1 !== 'work' || d.state2 !== 'work');
+    if (!hasAnySelection) continue;
+    const o1 = slot.days.filter(d => d.state1 === 'rdo').length;
+    const o2 = slot.days.filter(d => d.state2 === 'rdo').length;
+    if (o1 !== 12) return toast(`DP ${getRDOSlotDP(s).dp}: 1st choice needs 12 RDOs (has ${o1})`, true);
+    if (o2 !== 12) return toast(`DP ${getRDOSlotDP(s).dp}: 2nd choice needs 12 RDOs (has ${o2})`, true);
+  }
+
+  // Portrait letter: 612 × 792 pt
+  const doc = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'portrait' });
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+
+  // ===== HEADER =====
+  doc.setFillColor(10, 31, 61);
+  doc.rect(0, 0, W, 50, 'F');
+  doc.setFillColor(201, 169, 97);
+  doc.rect(0, 50, W, 3, 'F');
+  doc.setTextColor(245, 242, 235);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.text('LOS ANGELES AIRPORT POLICE', 20, 22);
+  doc.setFontSize(11);
+  doc.setTextColor(230, 196, 120);
+  doc.text('WATCH / DAYS-OFF BID REQUEST', 20, 38);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text('APD FORM 086', W - 20, 20, { align: 'right' });
+  const stamp = new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
+  doc.text('Generated: ' + stamp, W - 20, 34, { align: 'right' });
+
+  // ===== OFFICER INFO STRIP =====
+  let y = 60;
+  doc.setFillColor(245, 242, 235);
+  doc.rect(14, y, W - 28, 28, 'F');
+  doc.setDrawColor(140, 132, 112);
+  doc.setLineWidth(0.6);
+  doc.rect(14, y, W - 28, 28);
+  const stripW = W - 28;
+  let cx = 14;
+  const drawInfo = (label, value, w) => {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.5);
+    doc.setTextColor(100, 100, 100);
+    doc.text(label, cx + 5, y + 9);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(26, 26, 26);
+    doc.text(value || '—', cx + 5, y + 22);
+    cx += w * stripW;
+    if (cx < 14 + stripW - 1) {
+      doc.setDrawColor(190, 185, 168);
+      doc.line(cx, y + 4, cx, y + 24);
+    }
+  };
+  drawInfo('LAST NAME, FI', name, 0.32);
+  drawInfo('SERIAL #', `№${serial}`, 0.16);
+  drawInfo('WATCH', `Watch ${watch}`, 0.14);
+  drawInfo('SUPERVISOR INITIALS', '', 0.19);
+  drawInfo('DATE RECEIVED', '', 0.19);
+  y += 32;
+
+  // ===== SYMBOL LEGEND =====
+  doc.setFillColor(10, 31, 61);
+  doc.rect(14, y, W - 28, 12, 'F');
+  doc.setTextColor(230, 196, 120);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.text('SYMBOLS:  O = Regular Day Off    V = Vacation    H = Holiday    M/L = Military Leave    JD = Jury Duty    FL = Family Leave    SK = Sick',
+           W / 2, y + 8, { align: 'center' });
+  y += 16;
+
+  // ===== 4 POSITIONS, EQUAL HEIGHT =====
+  // Available height: H - y - 50 (footer)
+  const availH = H - y - 50;
+  const rowH = availH / 4;
+  const rowX = 14;
+  const rowW = W - 28;
+  const labelW = 60;
+
+  // Watch bid row (placeholder in this RDO PDF output)
+  drawWatchPlaceholderRow(doc, rowX, y, rowW, rowH, labelW);
+  y += rowH;
+
+  // Three RDO bid rows
+  for (let s = 0; s < 3; s++) {
+    drawRDORowPortrait(doc, rowX, y, rowW, rowH, labelW, s);
+    y += rowH;
+  }
+
+  // ===== FOOTER =====
+  let fy = H - 38;
+  doc.setDrawColor(140, 140, 140);
+  doc.setLineWidth(0.5);
+  doc.line(20, fy, 240, fy);
+  doc.line(280, fy, 460, fy);
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Officer Signature', 20, fy + 9);
+  doc.text('Date', 280, fy + 9);
+  doc.setFontSize(7);
+  doc.setTextColor(140, 140, 140);
+  doc.text('APD Form 086 · LAXPD Watch / Days-Off Bid', W - 14, H - 14, { align: 'right' });
+
+  const safe = name.replace(/[^a-z0-9]+/gi, '_');
+  const startInfo = getRDOSlotDP(0);
+  doc.save(`APD086_${safe}_DP${startInfo.dp}_${startInfo.year}.pdf`);
+  toast('PDF generated');
+}
+
+function drawWatchPlaceholderRow(doc, x, y, w, h, labelW) {
+  // Left label
+  doc.setFillColor(120, 120, 120);
+  doc.rect(x, y, labelW, h, 'F');
+  doc.setTextColor(245, 242, 235);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text('WATCH', x + labelW / 2, y + h / 2 - 6, { align: 'center' });
+  doc.text('BID', x + labelW / 2, y + h / 2 + 8, { align: 'center' });
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(220, 220, 220);
+  doc.text('NOT IN', x + labelW / 2, y + h / 2 + 22, { align: 'center' });
+  doc.text('THIS PDF', x + labelW / 2, y + h / 2 + 30, { align: 'center' });
+
+  // Body box
+  const bx = x + labelW;
+  const bw = w - labelW;
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.7);
+  doc.rect(bx, y, bw, h);
+  // Sub-header: 1ST CHOICE | 2ND CHOICE
+  doc.setFillColor(245, 242, 235);
+  doc.rect(bx, y, bw, 14, 'F');
+  doc.setDrawColor(180, 180, 180);
+  doc.line(bx, y + 14, bx + bw, y + 14);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.setTextColor(120, 120, 120);
+  doc.text('1ST CHOICE', bx + bw / 4, y + 10, { align: 'center' });
+  doc.text('2ND CHOICE', bx + 3 * bw / 4, y + 10, { align: 'center' });
+  doc.setDrawColor(200, 200, 200);
+  doc.line(bx + bw / 2, y + 14, bx + bw / 2, y + h);
+  // Diagonal "USE WATCH BID PDF" hint
+  doc.setDrawColor(220, 220, 220);
+  doc.setLineWidth(0.4);
+  doc.line(bx + 4, y + 16, bx + bw - 4, y + h - 4);
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(8);
+  doc.setTextColor(180, 180, 180);
+  doc.text('Generate the Watch Bid PDF separately', bx + bw / 2, y + h / 2 + 6, { align: 'center' });
+}
+
+function drawRDORowPortrait(doc, x, y, w, h, labelW, slotIdx) {
+  const slot = rdoSlots[slotIdx];
+  const info = getRDOSlotDP(slotIdx);
+  const used = slot.days.some(d => d.state1 !== 'work' || d.state2 !== 'work');
+
+  // Left label panel
+  doc.setFillColor(used ? 10 : 120, used ? 31 : 120, used ? 61 : 120);
+  doc.rect(x, y, labelW, h, 'F');
+  doc.setTextColor(used ? 230 : 220, used ? 196 : 220, used ? 120 : 220);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text(`DP ${info.dp}`, x + labelW / 2, y + h / 2 - 12, { align: 'center' });
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${info.year}`, x + labelW / 2, y + h / 2 - 1, { align: 'center' });
+  doc.setFontSize(6.5);
+  doc.text(used ? 'RDO BID' : 'NOT BID', x + labelW / 2, y + h / 2 + 12, { align: 'center' });
+  doc.setFontSize(5.5);
+  doc.text(fmtMDY(info.start), x + labelW / 2, y + h - 14, { align: 'center' });
+  doc.text(fmtMDY(info.end), x + labelW / 2, y + h - 6, { align: 'center' });
+
+  // Body: split into 1ST CHOICE | 2ND CHOICE side-by-side mini grids
+  const bx = x + labelW;
+  const bw = w - labelW;
+  doc.setDrawColor(120, 120, 120);
+  doc.setLineWidth(0.7);
+  doc.rect(bx, y, bw, h);
+
+  // Sub-header band
+  doc.setFillColor(245, 242, 235);
+  doc.rect(bx, y, bw, 12, 'F');
+  doc.setDrawColor(180, 180, 180);
+  doc.line(bx, y + 12, bx + bw, y + 12);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.setTextColor(10, 31, 61);
+  doc.text('1ST CHOICE', bx + bw / 4, y + 9, { align: 'center' });
+  doc.text('2ND CHOICE', bx + 3 * bw / 4, y + 9, { align: 'center' });
+  // Vertical divider between 1st and 2nd
+  doc.setDrawColor(120, 120, 120);
+  doc.line(bx + bw / 2, y, bx + bw / 2, y + h);
+
+  if (!used) {
+    // Diagonal grayed line — slot has no entries
+    doc.setDrawColor(220, 220, 220);
+    doc.setLineWidth(0.4);
+    doc.line(bx + 4, y + 14, bx + bw - 4, y + h - 4);
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(180, 180, 180);
+    doc.text('No selections made', bx + bw / 2, y + h / 2 + 6, { align: 'center' });
+    return;
+  }
+
+  // Draw the two mini-grids
+  drawMiniRdoGrid(doc, bx, y + 12, bw / 2, h - 12, slot, 'state1', [26, 77, 122], [139, 58, 31]);
+  drawMiniRdoGrid(doc, bx + bw / 2, y + 12, bw / 2, h - 12, slot, 'state2', [217, 122, 61], [107, 58, 31]);
+}
+
+function drawMiniRdoGrid(doc, x, y, w, h, slot, stateKey, rdoFill, vacFill) {
+  // 4 weeks × 7 days
+  const cellW = w / 7;
+  const cellH = h / 4;
+  for (let week = 0; week < 4; week++) {
+    for (let dow = 0; dow < 7; dow++) {
+      const idx = week * 7 + dow;
+      const cd = slot.days[idx];
+      const cx = x + cellW * dow;
+      const cy = y + cellH * week;
+      const sym = cd[stateKey];
+
+      let fill;
+      if (sym === 'rdo') fill = rdoFill;
+      else if (sym === 'vac') fill = vacFill;
+      else if (dow === 0 || dow === 6) fill = [235, 229, 210];
+      else fill = [255, 255, 255];
+
+      doc.setFillColor(...fill);
+      doc.rect(cx, cy, cellW, cellH, 'F');
+      doc.setDrawColor(190, 185, 170);
+      doc.setLineWidth(0.3);
+      doc.rect(cx, cy, cellW, cellH);
+
+      const isMarked = sym !== 'work';
+      const txtColor = isMarked ? [245, 242, 235] : [80, 80, 80];
+
+      // Day-of-week mini label on first row
+      if (week === 0) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(5);
+        doc.setTextColor(...(isMarked ? txtColor : [120, 120, 120]));
+        const dows = ['SU','M','TU','W','TH','F','SA'];
+        doc.text(dows[dow], cx + 2, cy + 5);
+      }
+
+      // Date (top-right)
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6);
+      doc.setTextColor(...txtColor);
+      doc.text(`${cd.date.getMonth()+1}/${cd.date.getDate()}`, cx + cellW - 2, cy + 6, { align: 'right' });
+
+      // Symbol (centered)
+      if (isMarked) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(sym === 'rdo' ? 11 : 8);
+        doc.setTextColor(245, 242, 235);
+        doc.text(sym === 'rdo' ? 'O' : 'VC', cx + cellW / 2, cy + cellH - 2, { align: 'center' });
+      }
+    }
+  }
+}
+</script>
+
+</body>
+</html>
