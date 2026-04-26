@@ -986,16 +986,24 @@ function fmtDateLong(d) {
    POPULATE DP DROPDOWNS
    ============================================================ */
 
-// Watch form: group DPs into triples starting from DP7 of the anchor year
+// Watch form: group DPs into triples. Walk backward from anchor to capture any
+// in-progress earlier triple, then forward from anchor across future periods.
 function buildWatchDPOptions(selectEl) {
   selectEl.innerHTML = '';
   const now = new Date();
-  // Generate triples from DP7/2026 forward across multiple years
-  // Walk DP/year forward, emitting one option per group of 3
+
   const triples = [];
-  let dp = DP_ANCHOR.dp;   // 7
-  let yr = DP_ANCHOR.year; // 2026
-  for (let i = 0; i < 16; i++) { // 16 triples ≈ ~3.7 years of coverage
+
+  // Walk backward up to 4 triples (≈ 1 year prior). Include any whose final DP
+  // hasn't ended yet (still relevant for a current bid).
+  for (let back = 4; back >= 1; back--) {
+    let dp = DP_ANCHOR.dp;
+    let yr = DP_ANCHOR.year;
+    // step backward by `back * 3` DPs
+    for (let s = 0; s < back * 3; s++) {
+      dp -= 1;
+      if (dp < 1) { dp = 13; yr -= 1; }
+    }
     const group = [];
     for (let j = 0; j < 3; j++) {
       group.push(getDPInfo(dp, yr));
@@ -1004,6 +1012,20 @@ function buildWatchDPOptions(selectEl) {
     }
     triples.push(group);
   }
+
+  // Walk forward 16 triples from anchor
+  let dp = DP_ANCHOR.dp;
+  let yr = DP_ANCHOR.year;
+  for (let i = 0; i < 16; i++) {
+    const group = [];
+    for (let j = 0; j < 3; j++) {
+      group.push(getDPInfo(dp, yr));
+      dp += 1;
+      if (dp > 13) { dp = 1; yr += 1; }
+    }
+    triples.push(group);
+  }
+
   triples.forEach(g => {
     // skip groups whose final DP ended before today
     if (g[2].end < now) return;
@@ -1012,8 +1034,11 @@ function buildWatchDPOptions(selectEl) {
     opt.textContent = `DP ${g[0].dp}–${g[2].dp} • ${g[0].year}${g[2].year !== g[0].year ? '/' + g[2].year : ''} (${fmtDate(g[0].start)} – ${fmtDate(g[2].end)})`;
     selectEl.appendChild(opt);
   });
-  // default to first option (which will be the current/upcoming triple)
-  if (selectEl.options.length > 0) selectEl.selectedIndex = 0;
+  // default to the anchor triple (DP7/2026), or first option if anchor isn't there
+  const defaultVal = `${DP_ANCHOR.dp}-${DP_ANCHOR.year}`;
+  const anchorOpt = Array.from(selectEl.options).find(o => o.value === defaultVal);
+  if (anchorOpt) anchorOpt.selected = true;
+  else if (selectEl.options.length > 0) selectEl.selectedIndex = 0;
 }
 
 // RDO form: list every DP individually
@@ -1733,8 +1758,8 @@ function generateCombinedPDF() {
     dps.push(getDPInfo(curDP, curYr));
   }
 
-  const watch1 = watchState.c1 != null ? String(watchState.c1) : '';
-  const watch2 = watchState.c2 != null ? String(watchState.c2) : '';
+  const watch1 = watchState.c1 != null ? `Watch ${watchState.c1}` : '';
+  const watch2 = watchState.c2 != null ? `Watch ${watchState.c2}` : '';
   const symFor = (s) => s === 'rdo' ? 'O' : s === 'vac' ? 'V' : '';
 
   // Determine which forms to render.
@@ -1754,6 +1779,12 @@ function generateCombinedPDF() {
   const FORM_H = 165;
 
   // Form 1: Watch BID — 3-DP combined
+  // Mark row spells out "WATCH BID" with one letter per cell, exactly as on the sample form.
+  // Letters at cell indices: 8=W, 9=A, 10=T, 11=C, 12=H, gap at 13, 14=B, 15=I, 16=D
+  const watchBidLabelRow = new Array(28).fill('');
+  ['W','A','T','C','H'].forEach((ch, i) => watchBidLabelRow[8 + i] = ch);
+  ['B','I','D'].forEach((ch, i) => watchBidLabelRow[14 + i] = ch);
+
   drawAPD086(doc, PAGE_MARGIN + 4, FORM_H, {
     name: nameWithRank, serial, curWatch,
     dpHeader: 'DP#s',
@@ -1771,10 +1802,11 @@ function generateCombinedPDF() {
       }
       return arr;
     }),
-    markRows: [] // no per-day marks on watch bid
+    markRows: [ watchBidLabelRow ]
   });
 
-  // Forms 2..N: only included DPs, stacked tightly
+  // Forms 2..N: only included DPs, stacked tightly.
+  // RDO forms: 1st/2nd CHOICE boxes left blank — they are only used on the Watch BID.
   includedDPs.forEach((slotIdx, i) => {
     const slot = rdoSlots[slotIdx];
     const info = dps[slotIdx];
@@ -1785,8 +1817,8 @@ function generateCombinedPDF() {
       dpRange: String(info.dp),
       startDate: fmtMDDYYYY(info.start),
       endDate: fmtMDDYYYY(info.end),
-      firstChoice: watch1,
-      secondChoice: watch2,
+      firstChoice: '',
+      secondChoice: '',
       dateRows: [ slot.days.map(d => d.date) ],
       markRows: (() => {
         const rows = [ slot.days.map(d => symFor(d.state1)) ];
