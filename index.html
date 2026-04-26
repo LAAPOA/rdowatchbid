@@ -345,44 +345,31 @@
   .rdo-controls .field input,
   .rdo-controls .field select { min-width: 120px; }
 
-  /* View mode toggle */
-  .view-toggle {
-    display: flex;
-    gap: 4px;
-    background: var(--paper-dark);
-    padding: 4px;
-    border: 1px solid var(--line);
-    margin-bottom: 16px;
-  }
-  .view-tab {
-    flex: 1;
-    padding: 9px 12px;
-    background: transparent;
-    border: none;
-    font-family: 'Oswald', sans-serif;
-    font-size: 12px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--ink-soft);
+  /* RDO counters as view-target click toggles */
+  .view-target {
     cursor: pointer;
+    user-select: none;
+    padding: 4px 10px 4px 6px;
+    border: 1px solid transparent;
+    border-radius: 3px;
     transition: all 0.12s;
-    font-weight: 500;
   }
-  .view-tab:hover { color: var(--navy); }
-  .view-tab.active {
-    background: var(--navy);
+  .view-target:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .view-target.view-active {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: var(--gold);
+  }
+  .view-target[data-view-target="1"].view-active {
+    border-color: var(--rdo-light);
+  }
+  .view-target[data-view-target="2"].view-active {
+    border-color: #e88a4d;
+  }
+  .view-target.view-active .num {
     color: var(--gold-bright);
   }
-  .view-tab .vt-dot {
-    display: inline-block;
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    margin-right: 6px;
-    vertical-align: -1px;
-  }
-  .view-tab .vt-dot.first { background: var(--rdo); }
-  .view-tab .vt-dot.second { background: #d97a3d; }
 
   .rdo-info {
     background: var(--navy);
@@ -614,6 +601,60 @@
   .day.v-2.s2-vac .date, .day.v-2.s2-vac .num, .day.v-2.s2-vac .mark
     { color: white; }
 
+  /* Single-view: hide the active-view's both-mode mark (it's redundant with .mark),
+     but show the OTHER choice's mark colored to match its choice — visually indicating
+     "this day has the other choice set." */
+  .day.v-1 .mark-1, .day.v-2 .mark-2 { display: none !important; }
+
+  /* In 1st-choice view, when the cell has a 2nd-choice mark and no 1st-choice fill,
+     render mark-2 in the 2nd-choice orange so it's identifiable.
+     Position at top-right so it doesn't collide with .mark (bottom-right). */
+  .day.v-1 .mark-2 {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: var(--rdo2-text, #c66432);
+    z-index: 2;
+    letter-spacing: 0.02em;
+  }
+  .day.v-1.s2-rdo .mark-2 { color: #c66432; } /* matches 2nd RDO orange */
+  .day.v-1.s2-vac .mark-2 { color: #6b3a1f; } /* matches 2nd VC brown */
+  /* When the cell IS a 1st-choice fill (blue/crimson), show the 2nd cross-mark in a
+     light contrasting color so it remains visible. */
+  .day.v-1.s1-rdo.s2-rdo .mark-2,
+  .day.v-1.s1-vac.s2-rdo .mark-2 { color: #ffae73; }
+  .day.v-1.s1-rdo.s2-vac .mark-2,
+  .day.v-1.s1-vac.s2-vac .mark-2 { color: #ffae73; }
+
+  /* In 2nd-choice view, mark-1 indicates a 1st-choice mark exists, colored in 1st blue */
+  .day.v-2 .mark-1 {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: #1a4d7a;
+    z-index: 2;
+    letter-spacing: 0.02em;
+  }
+  .day.v-2.s1-rdo .mark-1 { color: #1a4d7a; }
+  .day.v-2.s1-vac .mark-1 { color: var(--vac); }
+  /* If the cell is a 2nd-choice fill, lighten the 1st cross-mark to remain visible. */
+  .day.v-2.s2-rdo.s1-rdo .mark-1,
+  .day.v-2.s2-vac.s1-rdo .mark-1 { color: #7fb6ea; }
+  .day.v-2.s2-rdo.s1-vac .mark-1,
+  .day.v-2.s2-vac.s1-vac .mark-1 { color: #f0a48a; }
+
+  /* In single view, hide the .mark element if it would overlap with the cross-choice
+     indicator. .mark already shows for the active state via JS, in white-on-fill.
+     We need to keep it visible only when its own state is set; otherwise hide it. */
+  .day.v-1:not(.s1-rdo):not(.s1-vac) .mark { display: none; }
+  .day.v-2:not(.s2-rdo):not(.s2-vac) .mark { display: none; }
+
   /* BOTH VIEW — split top half = state1, bottom half = state2 */
   .day.v-both .layer-1 { top: 0; bottom: 50%; }
   .day.v-both .layer-2 { top: 50%; bottom: 0; }
@@ -622,32 +663,35 @@
   .day.v-both .layer-2.fill-rdo { background: #d97a3d; }
   .day.v-both .layer-2.fill-vac { background: #6b3a1f; }
 
-  .day.v-both .num { font-size: 16px; }
+  .day.v-both .date { font-size: 9px; }
+  .day.v-both .num { font-size: 13px; line-height: 1; margin-top: 0; }
   .day.v-both .num.has-fill { color: white; }
   .day.v-both .date.has-fill { color: rgba(255,255,255,0.85); }
 
   .day.v-both .mark-1 {
     position: absolute;
-    top: 18px;
+    top: 4px;
     right: 6px;
     font-family: 'Oswald', sans-serif;
     font-weight: 700;
-    font-size: 11px;
+    font-size: 10px;
     color: white;
     z-index: 2;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
     display: none;
   }
   .day.v-both .mark-2 {
     position: absolute;
-    bottom: 4px;
-    right: 6px;
+    bottom: 3px;
+    left: 0;
+    right: 0;
+    text-align: center;
     font-family: 'Oswald', sans-serif;
     font-weight: 700;
-    font-size: 11px;
+    font-size: 13px;
     color: white;
     z-index: 2;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
     display: none;
   }
   .day.v-both .mark { display: none; }
@@ -1276,15 +1320,10 @@ function buildSlotPanel(slotIdx) {
       <span class="slot-dp"><span>${info.year}</span> &nbsp; ${fmtDate(info.start)} – ${fmtDate(info.end)}</span>
     </div>
     <div class="rdo-slot-body">
-      <div class="view-toggle" data-slot="${slotIdx}">
-        <button type="button" class="view-tab ${slot.view === '1' ? 'active' : ''}" data-view="1"><span class="vt-dot first"></span>1st Choice</button>
-        <button type="button" class="view-tab ${slot.view === '2' ? 'active' : ''}" data-view="2"><span class="vt-dot second"></span>2nd Choice</button>
-        <button type="button" class="view-tab ${slot.view === 'both' ? 'active' : ''}" data-view="both">Both</button>
-      </div>
       <div class="rdo-info">
         <div class="info-block">
-          <div class="stat stat-rdo1"><span class="stat-label-prefix first"></span><span class="num">0</span>/12 RDO (1st)</div>
-          <div class="stat stat-rdo2"><span class="stat-label-prefix second"></span><span class="num">0</span>/12 RDO (2nd)</div>
+          <div class="stat stat-rdo1 view-target" data-view-target="1" title="Click to view 1st choice"><span class="stat-label-prefix first"></span><span class="num">0</span>/12 RDO (1st)</div>
+          <div class="stat stat-rdo2 view-target" data-view-target="2" title="Click to view 2nd choice"><span class="stat-label-prefix second"></span><span class="num">0</span>/12 RDO (2nd, optional)</div>
           <div class="stat"><span class="num stat-vac">0/0</span>VC (1st/2nd)</div>
         </div>
       </div>
@@ -1308,15 +1347,34 @@ function buildSlotPanel(slotIdx) {
     </div>
   `;
 
-  // Wire view tabs
-  slotEl.querySelectorAll('.view-toggle .view-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      slotEl.querySelectorAll('.view-toggle .view-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      slot.view = tab.dataset.view;
+  // Wire RDO counters as view targets.
+  // Click logic:
+  //   - inactive counter while only the OTHER is active → both become active (split view)
+  //   - inactive counter while NEITHER is active → that one becomes active (single view)
+  //   - active counter while in BOTH view → drops to single view of the OTHER counter
+  //   - active counter while in single view → no change (don't allow turning off both)
+  slotEl.querySelectorAll('.view-target').forEach(target => {
+    target.addEventListener('click', () => {
+      const t = target.dataset.viewTarget; // '1' or '2'
+      const cur = slot.view;
+      let next = cur;
+      if (t === '1') {
+        if (cur === '1') next = '1'; // already active alone
+        else if (cur === '2') next = 'both';
+        else if (cur === 'both') next = '2'; // dropping 1st keeps 2nd alone
+      } else { // t === '2'
+        if (cur === '2') next = '2';
+        else if (cur === '1') next = 'both';
+        else if (cur === 'both') next = '1';
+      }
+      slot.view = next;
+      paintViewTargets(slotIdx);
       applyViewClass(slotIdx);
     });
   });
+
+  // Initial highlight
+  setTimeout(() => paintViewTargets(slotIdx), 0);
 
   // Build day cells
   const calendar = slotEl.querySelector('.calendar');
@@ -1411,9 +1469,12 @@ function refreshDayCell(slotIdx, idx) {
 
   const num = cell.querySelector('.num');
   const date = cell.querySelector('.date');
-  const hasFill = cd.state1 !== 'work' || cd.state2 !== 'work';
-  num.classList.toggle('has-fill', hasFill);
-  date.classList.toggle('has-fill', hasFill);
+  // Date and day number live in the TOP half of the cell. Only color them white when the
+  // top half actually has a fill (state1 set). If only state2 is set, the top half is still
+  // unfilled white/parchment, so keep the text dark for visibility.
+  const topFilled = cd.state1 !== 'work';
+  num.classList.toggle('has-fill', topFilled);
+  date.classList.toggle('has-fill', topFilled);
 }
 
 function applyViewClass(slotIdx) {
@@ -1427,6 +1488,16 @@ function applyViewClass(slotIdx) {
     else cell.classList.add('v-both');
   });
   rdoSlots[slotIdx].days.forEach((_, i) => refreshDayCell(slotIdx, i));
+}
+
+function paintViewTargets(slotIdx) {
+  const slotEl = rdoSlotsEl.querySelector(`.rdo-slot[data-slot="${slotIdx}"]`);
+  if (!slotEl) return;
+  const v = rdoSlots[slotIdx].view;
+  const t1 = slotEl.querySelector('.view-target[data-view-target="1"]');
+  const t2 = slotEl.querySelector('.view-target[data-view-target="2"]');
+  if (t1) t1.classList.toggle('view-active', v === '1' || v === 'both');
+  if (t2) t2.classList.toggle('view-active', v === '2' || v === 'both');
 }
 
 function updateStats(slotIdx) {
@@ -1631,15 +1702,22 @@ function generateCombinedPDF() {
   if (!serial) return toast('Serial number required', true);
   if (!/^\d{5}$/.test(serial)) return toast('Serial must be exactly 5 digits', true);
 
-  // For RDO slots with selections, validate exactly 12 RDOs in each chosen choice.
+  // Validate selections.
+  // 1st choice is required when a DP has any selections — must be exactly 12 RDOs.
+  // 2nd choice is OPTIONAL — only validate if the user entered any 2nd-choice marks.
   for (let s = 0; s < 3; s++) {
     const slot = rdoSlots[s];
-    const has = slot.days.some(d => d.state1 !== 'work' || d.state2 !== 'work');
-    if (!has) continue;
-    const o1 = slot.days.filter(d => d.state1 === 'rdo').length;
-    const o2 = slot.days.filter(d => d.state2 === 'rdo').length;
-    if (o1 !== 12) return toast(`DP ${getRDOSlotDP(s).dp}: 1st choice needs 12 RDOs (has ${o1})`, true);
-    if (o2 !== 12) return toast(`DP ${getRDOSlotDP(s).dp}: 2nd choice needs 12 RDOs (has ${o2})`, true);
+    const has1 = slot.days.some(d => d.state1 !== 'work');
+    const has2 = slot.days.some(d => d.state2 !== 'work');
+    if (!has1 && !has2) continue;
+    if (has1) {
+      const o1 = slot.days.filter(d => d.state1 === 'rdo').length;
+      if (o1 !== 12) return toast(`DP ${getRDOSlotDP(s).dp}: 1st choice needs 12 RDOs (has ${o1})`, true);
+    }
+    if (has2) {
+      const o2 = slot.days.filter(d => d.state2 === 'rdo').length;
+      if (o2 !== 12) return toast(`DP ${getRDOSlotDP(s).dp}: 2nd choice needs 12 RDOs (has ${o2})`, true);
+    }
   }
 
   // Determine the 3 DPs from the watch start
@@ -1656,14 +1734,24 @@ function generateCombinedPDF() {
   const watch2 = watchState.c2 != null ? String(watchState.c2) : '';
   const symFor = (s) => s === 'rdo' ? 'O' : s === 'vac' ? 'V' : '';
 
+  // Determine which forms to render.
+  // Watch BID is always present. DPs 1-3 are included only if they have any RDO/VC selections.
+  const includedDPs = []; // array of slot indices
+  for (let s = 0; s < 3; s++) {
+    const slot = rdoSlots[s];
+    if (slot.days.some(d => d.state1 !== 'work' || d.state2 !== 'work')) {
+      includedDPs.push(s);
+    }
+  }
+
   const doc = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'portrait' });
 
-  // Layout: 4 form blocks stacked on one page. Compressed heights.
-  const totalAvail = PG_H - PAGE_MARGIN * 2;
-  const formH = (totalAvail - 14) / 4; // 14pt for the bottom symbol footer
+  // Fixed per-form height. Each APD-086 form needs ~135pt of content; we use 165pt
+  // to give a comfortable margin. Forms stack from the top; footer stays at bottom.
+  const FORM_H = 165;
 
   // Form 1: Watch BID — 3-DP combined
-  drawAPD086(doc, PAGE_MARGIN + 4, formH, {
+  drawAPD086(doc, PAGE_MARGIN + 4, FORM_H, {
     name, serial, curWatch,
     dpHeader: 'DP#s',
     dpRange: `${dps[0].dp} - ${dps[2].dp}`,
@@ -1683,13 +1771,12 @@ function generateCombinedPDF() {
     markRows: [] // no per-day marks on watch bid
   });
 
-  // Forms 2-4: per-DP RDO grids
-  for (let s = 0; s < 3; s++) {
-    const slot = rdoSlots[s];
-    const info = dps[s];
-    const has = slot.days.some(d => d.state1 !== 'work' || d.state2 !== 'work');
+  // Forms 2..N: only included DPs, stacked tightly
+  includedDPs.forEach((slotIdx, i) => {
+    const slot = rdoSlots[slotIdx];
+    const info = dps[slotIdx];
 
-    drawAPD086(doc, PAGE_MARGIN + 4 + formH * (s + 1), formH, {
+    drawAPD086(doc, PAGE_MARGIN + 4 + FORM_H * (i + 1), FORM_H, {
       name, serial, curWatch,
       dpHeader: 'DP#',
       dpRange: String(info.dp),
@@ -1698,12 +1785,14 @@ function generateCombinedPDF() {
       firstChoice: watch1,
       secondChoice: watch2,
       dateRows: [ slot.days.map(d => d.date) ],
-      markRows: has ? [
-        slot.days.map(d => symFor(d.state1)),
-        slot.days.map(d => symFor(d.state2))
-      ] : []
+      markRows: (() => {
+        const rows = [ slot.days.map(d => symFor(d.state1)) ];
+        const has2 = slot.days.some(d => d.state2 !== 'work');
+        if (has2) rows.push(slot.days.map(d => symFor(d.state2)));
+        return rows;
+      })()
     });
-  }
+  });
 
   // Single footer at the very bottom of the page
   pdfDrawFooter(doc, PG_H - PAGE_MARGIN - 14);
