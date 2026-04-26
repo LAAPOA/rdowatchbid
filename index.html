@@ -671,8 +671,27 @@
 
   .day.v-both .date { font-size: 9px; }
   .day.v-both .num { font-size: 13px; line-height: 1; margin-top: 0; }
-  .day.v-both .num.has-fill { color: white; }
-  .day.v-both .date.has-fill { color: rgba(255,255,255,0.85); }
+  .day.v-both .num.has-fill {
+    color: white;
+    /* 4-direction black outline so white numbers stay legible against any half-fill */
+    text-shadow:
+      -1px -1px 0 #000,
+       1px -1px 0 #000,
+      -1px  1px 0 #000,
+       1px  1px 0 #000,
+       0   -1px 0 #000,
+       0    1px 0 #000,
+      -1px  0   0 #000,
+       1px  0   0 #000;
+  }
+  .day.v-both .date.has-fill {
+    color: rgba(255,255,255,0.95);
+    text-shadow:
+      -1px -1px 0 #000,
+       1px -1px 0 #000,
+      -1px  1px 0 #000,
+       1px  1px 0 #000;
+  }
 
   .day.v-both .mark-1 {
     position: absolute;
