@@ -1580,497 +1580,306 @@ function toast(msg, isError) {
 }
 
 /* ============================================================
-   PDF GENERATION
+   PDF GENERATION — APD Form 086
+   Faithful black-and-white reproduction of the official form.
+   Layout (portrait letter, 612 × 792 pt):
+     - Title block: "LOS ANGELES AIRPORT POLICE" / "WATCH/DAYS-OFF BID REQUEST"
+     - Officer info row: LAST NAME/SERIAL | WATCH | DP#(s) | DP START | DP END
+     - Subtitle line: "MARK FIRST AND SECOND CHOICE OF WATCH ASSIGNMENT OR DAYS OFF"
+     - Choice row: 1ST CHOICE | 2ND CHOICE | SUPERVISOR'S INITIALS | DATE RECEIVED
+     - Day grid: SU M TU W TH F SA × 4 column headers (= 28 cols)
+                 Date row(s) — one per DP (3 for watch, 1 for RDO)
+                 Mark row(s) — same count as date rows
+     - Footer: APD FORM 086 (left) | Symbols legend (right)
    ============================================================ */
 const { jsPDF } = window.jspdf;
 
-function pdfHeader(doc, title) {
-  doc.setFillColor(10, 31, 61);
-  doc.rect(0, 0, 612, 70, 'F');
-  doc.setFillColor(201, 169, 97);
-  doc.rect(0, 70, 612, 4, 'F');
-  doc.setTextColor(245, 242, 235);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.text(title, 40, 36);
-  doc.setTextColor(230, 196, 120);
+// ------- shared layout constants --------
+const PG_W = 612;
+const PG_H = 792;
+const PAGE_MARGIN = 18;
+const BORDER_GRAY = 90;     // line color for table borders
+const FAINT_FILL = 235;     // light gray header fill
+
+
+function pdfDrawFooter(doc, y) {
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.text('LOS ANGELES AIRPORT POLICE', 40, 54);
-  const stamp = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
   doc.setFontSize(8);
-  doc.setTextColor(230, 196, 120);
-  doc.text('Generated: ' + stamp, 612 - 40, 54, { align: 'right' });
+  doc.setTextColor(0, 0, 0);
+  doc.text('APD FORM 086', PAGE_MARGIN, y + 12);
+  doc.setFontSize(7.5);
+  doc.text(
+    'Symbols: O-Regular; H - Holiday; V - Vacation; M/L - Military Leave; JD - Jury Duty; FL - Family Leave; SK - Sick',
+    PG_W / 2, y + 12, { align: 'center' }
+  );
 }
 
-function pdfFooter(doc) {
-  const ph = doc.internal.pageSize.getHeight();
-  doc.setDrawColor(201, 169, 97);
-  doc.setLineWidth(0.5);
-  doc.line(40, ph - 40, 612 - 40, ph - 40);
-  doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
-  doc.setFont('helvetica', 'italic');
-  doc.text('Officer signature acknowledges submission of this bid request.', 40, ph - 26);
-  doc.text('LAXPD Watch & RDO Bid System', 612 - 40, ph - 26, { align: 'right' });
-}
+// ----------------- COMBINED APD-086 PDF -----------------
+// One portrait page with 4 stacked APD-086 forms:
+//   1) Watch BID (3-DP combined, 1st/2nd watch choice in top boxes)
+//   2) 1st DP (single 28-day grid, marks from rdoSlots[0])
+//   3) 2nd DP (single 28-day grid, marks from rdoSlots[1])
+//   4) 3rd DP (single 28-day grid, marks from rdoSlots[2])
+// Both the Watch and RDO buttons call this same function.
 
-function generateWatchPDF() {
-  const name = document.getElementById('w-name').value.trim();
-  const curWatch = document.getElementById('w-curwatch').value;
-  const serial = document.getElementById('w-serial').value.trim();
-  const rank = document.getElementById('w-rank').value;
-  const notes = document.getElementById('w-notes').value.trim();
+function generateCombinedPDF() {
+  const name = (document.getElementById('w-name').value || document.getElementById('r-name').value).trim();
+  const serial = (document.getElementById('w-serial').value || document.getElementById('r-serial').value).trim();
+  const curWatch = document.getElementById('w-curwatch').value || document.getElementById('r-watch').value || '';
 
   if (!name) return toast('Officer name required', true);
   if (!serial) return toast('Serial number required', true);
   if (!/^\d{5}$/.test(serial)) return toast('Serial must be exactly 5 digits', true);
-  if (watchState.c1 == null && watchState.c2 == null) {
-    return toast('Select at least a 1st choice watch', true);
-  }
 
-  const [dp, yr] = wStartDP.value.split('-').map(Number);
-  const dps = [];
-  for (let i = 0; i < 3; i++) {
-    let curDP = dp + i;
-    let curYr = yr;
-    if (curDP > 13) { curDP -= 13; curYr += 1; }
-    dps.push(getDPInfo(curDP, curYr));
-  }
-
-  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
-  pdfHeader(doc, 'WATCH ASSIGNMENT BID');
-
-  let y = 110;
-  doc.setTextColor(26, 26, 26);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text('OFFICER INFORMATION', 40, y);
-  doc.setDrawColor(201, 169, 97);
-  doc.line(40, y + 4, 240, y + 4);
-  y += 22;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
-  const labelWidth = 110;
-  const drawRow = (label, value) => {
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(80, 80, 80);
-    doc.text(label, 40, y);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(26, 26, 26);
-    doc.text(value || '—', 40 + labelWidth, y);
-    y += 20;
-  };
-  drawRow('Name:', `${name}${curWatch ? '  •  Currently Watch ' + curWatch : ''}`);
-  drawRow('Serial #:', serial);
-  drawRow('Rank:', rank);
-
-  y += 12;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(26, 26, 26);
-  doc.text('BID PERIOD (3 DEPLOYMENT PERIODS)', 40, y);
-  doc.line(40, y + 4, 280, y + 4);
-  y += 22;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(80, 80, 80);
-  doc.text(`${fmtDateLong(dps[0].start)}  through  ${fmtDateLong(dps[2].end)}`, 40, y);
-  y += 18;
-
-  const boxW = 165, boxH = 60, gap = 12;
-  let bx = 40;
-  dps.forEach((info) => {
-    doc.setDrawColor(180, 180, 180);
-    doc.setFillColor(245, 242, 235);
-    doc.rect(bx, y, boxW, boxH, 'FD');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.setTextColor(10, 31, 61);
-    doc.text(`DP ${info.dp} • ${info.year}`, bx + boxW/2, y + 22, { align: 'center' });
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(80, 80, 80);
-    doc.text(fmtDate(info.start), bx + boxW/2, y + 38, { align: 'center' });
-    doc.text('to ' + fmtDate(info.end), bx + boxW/2, y + 50, { align: 'center' });
-    bx += boxW + gap;
-  });
-  y += boxH + 24;
-
-  // ===== WATCH BID ROW (APD-086 style: left label + 1ST CHOICE | 2ND CHOICE boxes) =====
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(26, 26, 26);
-  doc.text('REQUESTED WATCH ASSIGNMENT', 40, y);
-  doc.line(40, y + 4, 250, y + 4);
-  y += 14;
-
-  const rowX = 40;
-  const rowW = 532;
-  const rowH = 90;
-  const labelW = 90;
-
-  // Left "WATCH BID" label panel
-  doc.setFillColor(10, 31, 61);
-  doc.rect(rowX, y, labelW, rowH, 'F');
-  doc.setTextColor(230, 196, 120);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
-  doc.text('WATCH', rowX + labelW / 2, y + rowH / 2 - 8, { align: 'center' });
-  doc.text('BID', rowX + labelW / 2, y + rowH / 2 + 10, { align: 'center' });
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(201, 169, 97);
-  doc.text('1ST / 2ND CHOICE', rowX + labelW / 2, y + rowH - 8, { align: 'center' });
-
-  // Right side: 1ST CHOICE | 2ND CHOICE split
-  const choiceX = rowX + labelW;
-  const choiceW = rowW - labelW;
-  const halfW = choiceW / 2;
-
-  // border
-  doc.setDrawColor(120, 120, 120);
-  doc.setLineWidth(0.7);
-  doc.rect(choiceX, y, choiceW, rowH);
-  doc.line(choiceX + halfW, y, choiceX + halfW, y + rowH);
-
-  // sub-header band
-  doc.setFillColor(245, 242, 235);
-  doc.rect(choiceX, y, choiceW, 16, 'F');
-  doc.setDrawColor(180, 180, 180);
-  doc.line(choiceX, y + 16, choiceX + choiceW, y + 16);
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.setTextColor(120, 120, 120);
-  doc.text('1ST CHOICE', choiceX + halfW / 2, y + 11, { align: 'center' });
-  doc.text('2ND CHOICE', choiceX + halfW + halfW / 2, y + 11, { align: 'center' });
-
-  // Render the chosen watch numbers (or blank)
-  const renderChoice = (cx, cw, val) => {
-    if (val == null) return;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(46);
-    doc.setTextColor(10, 31, 61);
-    doc.text(String(val), cx + cw / 2, y + rowH - 18, { align: 'center' });
-  };
-  renderChoice(choiceX, halfW, watchState.c1);
-  renderChoice(choiceX + halfW, halfW, watchState.c2);
-
-  y += rowH + 20;
-
-  if (notes) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(26, 26, 26);
-    doc.text('COMMENTS', 40, y);
-    doc.setDrawColor(201, 169, 97);
-    doc.line(40, y + 4, 130, y + 4);
-    y += 16;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.setTextColor(60, 60, 60);
-    const wrapped = doc.splitTextToSize(notes, 530);
-    doc.text(wrapped, 40, y + 4);
-    y += wrapped.length * 13 + 10;
-  }
-
-  y = Math.max(y + 20, 660);
-  doc.setDrawColor(120, 120, 120);
-  doc.setLineWidth(0.7);
-  doc.line(40, y, 320, y);
-  doc.line(360, y, 540, y);
-  doc.setFontSize(9);
-  doc.setTextColor(100, 100, 100);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Officer Signature', 40, y + 14);
-  doc.text('Date', 360, y + 14);
-
-  pdfFooter(doc);
-
-  const safe = name.replace(/[^a-z0-9]+/gi, '_');
-  doc.save(`Watch_Bid_${safe}_DP${dps[0].dp}-${dps[2].dp}_${dps[0].year}.pdf`);
-  toast('Watch bid PDF generated');
-}
-
-function generateRDOPDF() {
-  const name = document.getElementById('r-name').value.trim();
-  const serial = document.getElementById('r-serial').value.trim();
-  const watch = document.getElementById('r-watch').value;
-  if (!name) return toast('Officer name required', true);
-  if (!serial) return toast('Serial number required', true);
-  if (!/^\d{5}$/.test(serial)) return toast('Serial must be exactly 5 digits', true);
-
-  // Validate: only check slots the user actually edited.
-  // For slots with any selection, both 1st and 2nd choices must have exactly 12 RDOs.
+  // For RDO slots with selections, validate exactly 12 RDOs in each chosen choice.
   for (let s = 0; s < 3; s++) {
     const slot = rdoSlots[s];
-    const hasAnySelection = slot.days.some(d => d.state1 !== 'work' || d.state2 !== 'work');
-    if (!hasAnySelection) continue;
+    const has = slot.days.some(d => d.state1 !== 'work' || d.state2 !== 'work');
+    if (!has) continue;
     const o1 = slot.days.filter(d => d.state1 === 'rdo').length;
     const o2 = slot.days.filter(d => d.state2 === 'rdo').length;
     if (o1 !== 12) return toast(`DP ${getRDOSlotDP(s).dp}: 1st choice needs 12 RDOs (has ${o1})`, true);
     if (o2 !== 12) return toast(`DP ${getRDOSlotDP(s).dp}: 2nd choice needs 12 RDOs (has ${o2})`, true);
   }
 
-  // Portrait letter: 612 × 792 pt
-  const doc = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'portrait' });
-  const W = doc.internal.pageSize.getWidth();
-  const H = doc.internal.pageSize.getHeight();
-
-  // ===== HEADER =====
-  doc.setFillColor(10, 31, 61);
-  doc.rect(0, 0, W, 50, 'F');
-  doc.setFillColor(201, 169, 97);
-  doc.rect(0, 50, W, 3, 'F');
-  doc.setTextColor(245, 242, 235);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(15);
-  doc.text('LOS ANGELES AIRPORT POLICE', 20, 22);
-  doc.setFontSize(11);
-  doc.setTextColor(230, 196, 120);
-  doc.text('WATCH / DAYS-OFF BID REQUEST', 20, 38);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.text('APD FORM 086', W - 20, 20, { align: 'right' });
-  const stamp = new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
-  doc.text('Generated: ' + stamp, W - 20, 34, { align: 'right' });
-
-  // ===== OFFICER INFO STRIP =====
-  let y = 60;
-  doc.setFillColor(245, 242, 235);
-  doc.rect(14, y, W - 28, 28, 'F');
-  doc.setDrawColor(140, 132, 112);
-  doc.setLineWidth(0.6);
-  doc.rect(14, y, W - 28, 28);
-  const stripW = W - 28;
-  let cx = 14;
-  const drawInfo = (label, value, w) => {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(6.5);
-    doc.setTextColor(100, 100, 100);
-    doc.text(label, cx + 5, y + 9);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(26, 26, 26);
-    doc.text(value || '—', cx + 5, y + 22);
-    cx += w * stripW;
-    if (cx < 14 + stripW - 1) {
-      doc.setDrawColor(190, 185, 168);
-      doc.line(cx, y + 4, cx, y + 24);
-    }
-  };
-  drawInfo('LAST NAME, FI', name, 0.32);
-  drawInfo('SERIAL #', `№${serial}`, 0.16);
-  drawInfo('WATCH', `Watch ${watch}`, 0.14);
-  drawInfo('SUPERVISOR INITIALS', '', 0.19);
-  drawInfo('DATE RECEIVED', '', 0.19);
-  y += 32;
-
-  // ===== SYMBOL LEGEND =====
-  doc.setFillColor(10, 31, 61);
-  doc.rect(14, y, W - 28, 12, 'F');
-  doc.setTextColor(230, 196, 120);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
-  doc.text('SYMBOLS:  O = Regular Day Off    V = Vacation    H = Holiday    M/L = Military Leave    JD = Jury Duty    FL = Family Leave    SK = Sick',
-           W / 2, y + 8, { align: 'center' });
-  y += 16;
-
-  // ===== 4 POSITIONS, EQUAL HEIGHT =====
-  // Available height: H - y - 50 (footer)
-  const availH = H - y - 50;
-  const rowH = availH / 4;
-  const rowX = 14;
-  const rowW = W - 28;
-  const labelW = 60;
-
-  // Watch bid row (placeholder in this RDO PDF output)
-  drawWatchPlaceholderRow(doc, rowX, y, rowW, rowH, labelW);
-  y += rowH;
-
-  // Three RDO bid rows
-  for (let s = 0; s < 3; s++) {
-    drawRDORowPortrait(doc, rowX, y, rowW, rowH, labelW, s);
-    y += rowH;
+  // Determine the 3 DPs from the watch start
+  const [dpStart, yrStart] = wStartDP.value.split('-').map(Number);
+  const dps = [];
+  for (let i = 0; i < 3; i++) {
+    let curDP = dpStart + i;
+    let curYr = yrStart;
+    if (curDP > 13) { curDP -= 13; curYr += 1; }
+    dps.push(getDPInfo(curDP, curYr));
   }
 
-  // ===== FOOTER =====
-  let fy = H - 38;
-  doc.setDrawColor(140, 140, 140);
-  doc.setLineWidth(0.5);
-  doc.line(20, fy, 240, fy);
-  doc.line(280, fy, 460, fy);
-  doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Officer Signature', 20, fy + 9);
-  doc.text('Date', 280, fy + 9);
-  doc.setFontSize(7);
-  doc.setTextColor(140, 140, 140);
-  doc.text('APD Form 086 · LAXPD Watch / Days-Off Bid', W - 14, H - 14, { align: 'right' });
+  const watch1 = watchState.c1 != null ? String(watchState.c1) : '';
+  const watch2 = watchState.c2 != null ? String(watchState.c2) : '';
+  const symFor = (s) => s === 'rdo' ? 'O' : s === 'vac' ? 'V' : '';
+
+  const doc = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'portrait' });
+
+  // Layout: 4 form blocks stacked on one page. Compressed heights.
+  const totalAvail = PG_H - PAGE_MARGIN * 2;
+  const formH = (totalAvail - 14) / 4; // 14pt for the bottom symbol footer
+
+  // Form 1: Watch BID — 3-DP combined
+  drawAPD086(doc, PAGE_MARGIN + 4, formH, {
+    name, serial, curWatch,
+    dpHeader: 'DP#s',
+    dpRange: `${dps[0].dp} - ${dps[2].dp}`,
+    startDate: fmtMDDYYYY(dps[0].start),
+    endDate: fmtMDDYYYY(dps[2].end),
+    firstChoice: watch1,
+    secondChoice: watch2,
+    dateRows: dps.map(info => {
+      const arr = [];
+      for (let i = 0; i < 28; i++) {
+        const d = new Date(info.start);
+        d.setDate(d.getDate() + i);
+        arr.push(d);
+      }
+      return arr;
+    }),
+    markRows: [] // no per-day marks on watch bid
+  });
+
+  // Forms 2-4: per-DP RDO grids
+  for (let s = 0; s < 3; s++) {
+    const slot = rdoSlots[s];
+    const info = dps[s];
+    const has = slot.days.some(d => d.state1 !== 'work' || d.state2 !== 'work');
+
+    drawAPD086(doc, PAGE_MARGIN + 4 + formH * (s + 1), formH, {
+      name, serial, curWatch,
+      dpHeader: 'DP#',
+      dpRange: String(info.dp),
+      startDate: fmtMDDYYYY(info.start),
+      endDate: fmtMDDYYYY(info.end),
+      firstChoice: watch1,
+      secondChoice: watch2,
+      dateRows: [ slot.days.map(d => d.date) ],
+      markRows: has ? [
+        slot.days.map(d => symFor(d.state1)),
+        slot.days.map(d => symFor(d.state2))
+      ] : []
+    });
+  }
+
+  // Single footer at the very bottom of the page
+  pdfDrawFooter(doc, PG_H - PAGE_MARGIN - 14);
 
   const safe = name.replace(/[^a-z0-9]+/gi, '_');
-  const startInfo = getRDOSlotDP(0);
-  doc.save(`APD086_${safe}_DP${startInfo.dp}_${startInfo.year}.pdf`);
+  doc.save(`APD086_${safe}_DP${dps[0].dp}-${dps[2].dp}_${dps[0].year}.pdf`);
   toast('PDF generated');
 }
 
-function drawWatchPlaceholderRow(doc, x, y, w, h, labelW) {
-  // Left label
-  doc.setFillColor(120, 120, 120);
-  doc.rect(x, y, labelW, h, 'F');
-  doc.setTextColor(245, 242, 235);
+function generateWatchPDF() { generateCombinedPDF(); }
+function generateRDOPDF() { generateCombinedPDF(); }
+
+// Draw a single APD-086 form block at top-y `y`, occupying height `h`.
+// `data` carries: name, serial, curWatch, dpHeader, dpRange, startDate, endDate,
+//                 firstChoice, secondChoice, dateRows (Date[][] — one per row),
+//                 markRows (string[][] — one per mark row).
+function drawAPD086(doc, y, h, data) {
+  const x = PAGE_MARGIN;
+  const w = PG_W - PAGE_MARGIN * 2;
+
+  // Compute internal row heights to fit `h`.
+  // Fixed allocations:
+  const titleH = 16;     // 2 lines: title + subtitle
+  const officerH = 22;   // 5-column officer info
+  const subtitleH = 11;
+  const choiceH = 26;    // 4-column choice row
+  const headerRowH = 11; // day-of-week header
+  const dateRowH = 13;
+  const markRowH = 13;
+
+  const nDateRows = data.dateRows.length;
+  const nMarkRows = data.markRows.length;
+
+  // Title (2 stacked centered lines)
+  doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
-  doc.text('WATCH', x + labelW / 2, y + h / 2 - 6, { align: 'center' });
-  doc.text('BID', x + labelW / 2, y + h / 2 + 8, { align: 'center' });
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(220, 220, 220);
-  doc.text('NOT IN', x + labelW / 2, y + h / 2 + 22, { align: 'center' });
-  doc.text('THIS PDF', x + labelW / 2, y + h / 2 + 30, { align: 'center' });
+  doc.text('LOS ANGELES AIRPORT POLICE', PG_W / 2, y + 8, { align: 'center' });
+  doc.setFontSize(10);
+  doc.text('WATCH/DAYS-OFF BID REQUEST', PG_W / 2, y + 18, { align: 'center' });
+  let cy = y + titleH + 4;
 
-  // Body box
-  const bx = x + labelW;
-  const bw = w - labelW;
-  doc.setDrawColor(180, 180, 180);
-  doc.setLineWidth(0.7);
-  doc.rect(bx, y, bw, h);
-  // Sub-header: 1ST CHOICE | 2ND CHOICE
-  doc.setFillColor(245, 242, 235);
-  doc.rect(bx, y, bw, 14, 'F');
-  doc.setDrawColor(180, 180, 180);
-  doc.line(bx, y + 14, bx + bw, y + 14);
+  // Officer info row (5 columns)
+  drawOfficerRow(doc, x, cy, w, officerH, data);
+  cy += officerH;
+
+  // Subtitle line
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
-  doc.setTextColor(120, 120, 120);
-  doc.text('1ST CHOICE', bx + bw / 4, y + 10, { align: 'center' });
-  doc.text('2ND CHOICE', bx + 3 * bw / 4, y + 10, { align: 'center' });
-  doc.setDrawColor(200, 200, 200);
-  doc.line(bx + bw / 2, y + 14, bx + bw / 2, y + h);
-  // Diagonal "USE WATCH BID PDF" hint
-  doc.setDrawColor(220, 220, 220);
-  doc.setLineWidth(0.4);
-  doc.line(bx + 4, y + 16, bx + bw - 4, y + h - 4);
-  doc.setFont('helvetica', 'italic');
   doc.setFontSize(8);
-  doc.setTextColor(180, 180, 180);
-  doc.text('Generate the Watch Bid PDF separately', bx + bw / 2, y + h / 2 + 6, { align: 'center' });
+  doc.text('MARK FIRST AND SECOND CHOICE OF WATCH ASSIGNMENT OR DAYS OFF',
+           PG_W / 2, cy + 8, { align: 'center' });
+  cy += subtitleH;
+
+  // 1ST CHOICE | 2ND CHOICE | SUPERVISOR'S INITIALS | DATE RECEIVED row
+  drawChoiceRow(doc, x, cy, w, choiceH, data);
+  cy += choiceH;
+
+  // Day-of-week header (28 columns, SU M TU W TH F SA × 4)
+  drawDOWHeader(doc, x, cy, w, headerRowH);
+  cy += headerRowH;
+
+  const cellW = w / 28;
+
+  // Date rows
+  data.dateRows.forEach(dateRow => {
+    drawDateRow(doc, x, cy, w, dateRowH, cellW, dateRow);
+    cy += dateRowH;
+  });
+
+  // Mark rows (each row of strings becomes its own row of marks)
+  data.markRows.forEach(markRow => {
+    drawMarkRow(doc, x, cy, w, markRowH, cellW, markRow);
+    cy += markRowH;
+  });
 }
 
-function drawRDORowPortrait(doc, x, y, w, h, labelW, slotIdx) {
-  const slot = rdoSlots[slotIdx];
-  const info = getRDOSlotDP(slotIdx);
-  const used = slot.days.some(d => d.state1 !== 'work' || d.state2 !== 'work');
-
-  // Left label panel
-  doc.setFillColor(used ? 10 : 120, used ? 31 : 120, used ? 61 : 120);
-  doc.rect(x, y, labelW, h, 'F');
-  doc.setTextColor(used ? 230 : 220, used ? 196 : 220, used ? 120 : 220);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text(`DP ${info.dp}`, x + labelW / 2, y + h / 2 - 12, { align: 'center' });
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`${info.year}`, x + labelW / 2, y + h / 2 - 1, { align: 'center' });
-  doc.setFontSize(6.5);
-  doc.text(used ? 'RDO BID' : 'NOT BID', x + labelW / 2, y + h / 2 + 12, { align: 'center' });
-  doc.setFontSize(5.5);
-  doc.text(fmtMDY(info.start), x + labelW / 2, y + h - 14, { align: 'center' });
-  doc.text(fmtMDY(info.end), x + labelW / 2, y + h - 6, { align: 'center' });
-
-  // Body: split into 1ST CHOICE | 2ND CHOICE side-by-side mini grids
-  const bx = x + labelW;
-  const bw = w - labelW;
-  doc.setDrawColor(120, 120, 120);
-  doc.setLineWidth(0.7);
-  doc.rect(bx, y, bw, h);
-
-  // Sub-header band
-  doc.setFillColor(245, 242, 235);
-  doc.rect(bx, y, bw, 12, 'F');
-  doc.setDrawColor(180, 180, 180);
-  doc.line(bx, y + 12, bx + bw, y + 12);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
-  doc.setTextColor(10, 31, 61);
-  doc.text('1ST CHOICE', bx + bw / 4, y + 9, { align: 'center' });
-  doc.text('2ND CHOICE', bx + 3 * bw / 4, y + 9, { align: 'center' });
-  // Vertical divider between 1st and 2nd
-  doc.setDrawColor(120, 120, 120);
-  doc.line(bx + bw / 2, y, bx + bw / 2, y + h);
-
-  if (!used) {
-    // Diagonal grayed line — slot has no entries
-    doc.setDrawColor(220, 220, 220);
-    doc.setLineWidth(0.4);
-    doc.line(bx + 4, y + 14, bx + bw - 4, y + h - 4);
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(8);
-    doc.setTextColor(180, 180, 180);
-    doc.text('No selections made', bx + bw / 2, y + h / 2 + 6, { align: 'center' });
-    return;
+function drawOfficerRow(doc, x, y, w, rowH, data) {
+  const cw = [w * 0.36, w * 0.10, w * 0.10, w * 0.22, w * 0.22];
+  doc.setDrawColor(BORDER_GRAY, BORDER_GRAY, BORDER_GRAY);
+  doc.setLineWidth(0.6);
+  doc.rect(x, y, w, rowH);
+  let cx = x;
+  for (let i = 0; i < cw.length - 1; i++) {
+    cx += cw[i];
+    doc.line(cx, y, cx, y + rowH);
   }
-
-  // Draw the two mini-grids
-  drawMiniRdoGrid(doc, bx, y + 12, bw / 2, h - 12, slot, 'state1', [26, 77, 122], [139, 58, 31]);
-  drawMiniRdoGrid(doc, bx + bw / 2, y + 12, bw / 2, h - 12, slot, 'state2', [217, 122, 61], [107, 58, 31]);
+  const headers = ['LAST NAME, FI, SERIAL #:', 'WATCH', data.dpHeader || 'DP#s', 'DP START DATE:', 'DP END DATE:'];
+  const values  = [`${data.name}  #${data.serial}`, data.curWatch || '', data.dpRange || '', data.startDate || '', data.endDate || ''];
+  cx = x;
+  for (let i = 0; i < cw.length; i++) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.5);
+    doc.text(headers[i], cx + 3, y + 7);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text(String(values[i]), cx + cw[i] / 2, y + rowH - 5, { align: 'center' });
+    cx += cw[i];
+  }
 }
 
-function drawMiniRdoGrid(doc, x, y, w, h, slot, stateKey, rdoFill, vacFill) {
-  // 4 weeks × 7 days
-  const cellW = w / 7;
-  const cellH = h / 4;
-  for (let week = 0; week < 4; week++) {
-    for (let dow = 0; dow < 7; dow++) {
-      const idx = week * 7 + dow;
-      const cd = slot.days[idx];
-      const cx = x + cellW * dow;
-      const cy = y + cellH * week;
-      const sym = cd[stateKey];
-
-      let fill;
-      if (sym === 'rdo') fill = rdoFill;
-      else if (sym === 'vac') fill = vacFill;
-      else if (dow === 0 || dow === 6) fill = [235, 229, 210];
-      else fill = [255, 255, 255];
-
-      doc.setFillColor(...fill);
-      doc.rect(cx, cy, cellW, cellH, 'F');
-      doc.setDrawColor(190, 185, 170);
-      doc.setLineWidth(0.3);
-      doc.rect(cx, cy, cellW, cellH);
-
-      const isMarked = sym !== 'work';
-      const txtColor = isMarked ? [245, 242, 235] : [80, 80, 80];
-
-      // Day-of-week mini label on first row
-      if (week === 0) {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(5);
-        doc.setTextColor(...(isMarked ? txtColor : [120, 120, 120]));
-        const dows = ['SU','M','TU','W','TH','F','SA'];
-        doc.text(dows[dow], cx + 2, cy + 5);
-      }
-
-      // Date (top-right)
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(6);
-      doc.setTextColor(...txtColor);
-      doc.text(`${cd.date.getMonth()+1}/${cd.date.getDate()}`, cx + cellW - 2, cy + 6, { align: 'right' });
-
-      // Symbol (centered)
-      if (isMarked) {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(sym === 'rdo' ? 11 : 8);
-        doc.setTextColor(245, 242, 235);
-        doc.text(sym === 'rdo' ? 'O' : 'VC', cx + cellW / 2, cy + cellH - 2, { align: 'center' });
-      }
+function drawChoiceRow(doc, x, y, w, rowH, data) {
+  const cw = w / 4;
+  doc.setDrawColor(BORDER_GRAY, BORDER_GRAY, BORDER_GRAY);
+  doc.setLineWidth(0.6);
+  doc.rect(x, y, w, rowH);
+  for (let i = 1; i < 4; i++) doc.line(x + cw * i, y, x + cw * i, y + rowH);
+  const headers = ['1ST CHOICE', '2ND CHOICE', "SUPERVISOR'S INITIALS", 'DATE RECEIVED'];
+  const values  = [data.firstChoice || '', data.secondChoice || '', '', ''];
+  for (let i = 0; i < 4; i++) {
+    const cx = x + cw * i;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.5);
+    doc.text(headers[i], cx + 3, y + 8);
+    if (values[i]) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text(String(values[i]), cx + cw / 2, y + rowH - 5, { align: 'center' });
     }
   }
+}
+
+function drawDOWHeader(doc, x, y, w, rowH) {
+  const cellW = w / 28;
+  const dows = ['SU','M','TU','W','TH','F','SA'];
+  doc.setFillColor(FAINT_FILL, FAINT_FILL, FAINT_FILL);
+  doc.rect(x, y, w, rowH, 'F');
+  doc.setDrawColor(BORDER_GRAY, BORDER_GRAY, BORDER_GRAY);
+  doc.setLineWidth(0.4);
+  doc.rect(x, y, w, rowH);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(6.5);
+  doc.setTextColor(0, 0, 0);
+  for (let i = 0; i < 28; i++) {
+    const cx = x + cellW * i;
+    if (i > 0) doc.line(cx, y, cx, y + rowH);
+    doc.text(dows[i % 7], cx + cellW / 2, y + 7.5, { align: 'center' });
+  }
+}
+
+function drawDateRow(doc, x, y, w, rowH, cellW, dateRow) {
+  doc.setDrawColor(BORDER_GRAY, BORDER_GRAY, BORDER_GRAY);
+  doc.setLineWidth(0.4);
+  doc.rect(x, y, w, rowH);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6);
+  doc.setTextColor(0, 0, 0);
+  for (let i = 0; i < 28; i++) {
+    const cx = x + cellW * i;
+    if (i > 0) doc.line(cx, y, cx, y + rowH);
+    const d = dateRow[i];
+    if (d) {
+      doc.text(`${d.getMonth()+1}/${d.getDate()}`, cx + cellW / 2, y + 8.5, { align: 'center' });
+    }
+  }
+}
+
+function drawMarkRow(doc, x, y, w, rowH, cellW, markRow) {
+  doc.setDrawColor(BORDER_GRAY, BORDER_GRAY, BORDER_GRAY);
+  doc.setLineWidth(0.4);
+  doc.rect(x, y, w, rowH);
+  for (let i = 0; i < 28; i++) {
+    const cx = x + cellW * i;
+    if (i > 0) doc.line(cx, y, cx, y + rowH);
+    const m = markRow[i];
+    if (m) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(0, 0, 0);
+      doc.text(m, cx + cellW / 2, y + 9.5, { align: 'center' });
+    }
+  }
+}
+
+// Date format helper (MM/DD/YYYY for headers, matches the sample form).
+function fmtMDDYYYY(d) {
+  return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
 }
 </script>
 
