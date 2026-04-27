@@ -2127,12 +2127,48 @@ function generateCombinedPDF() {
   // Single footer at the very bottom of the page
   pdfDrawFooter(doc, PG_H - PAGE_MARGIN - 14);
 
-  // Edge case: nothing was selected. Save a blank-ish PDF directly and skip the email
-  // routing entirely (no subject, no recipient inference, no Web Share / mailto).
+  // ---- Filename + email-subject helpers ----
+  const lastName = (name || '').split(',')[0].trim() || 'unsigned';
+  const rankShort = rank === 'Sergeant' ? 'Sgt' : 'Ofcr';
+  const namePart = `${serial || '00000'}, ${rankShort} ${lastName}`;
+
+  // Format a list of {dp, year} with year stated only after the LAST DP of each
+  // year-run. Year-runs are groups of consecutive DPs that share the same year.
+  // Within a year-run, DPs are joined with commas plus an ampersand before the last:
+  //   1 DP:    "7"
+  //   2 DPs:   "7 & 8"      (ampersand only)
+  //   3+ DPs:  "7, 8 & 9"   (commas, ampersand before last)
+  // Year-runs are joined with ", ".
+  //   [{7,2026},{8,2026},{9,2026}]                   → "7, 8 & 9-2026"
+  //   [{7,2026}]                                     → "7-2026"
+  //   [{7,2026},{8,2026}]                            → "7 & 8-2026"
+  //   [{13,2026},{1,2027},{2,2027}]                  → "13-2026, 1 & 2-2027"
+  //   [{7,2026},{9,2026}] (non-contig but same year) → "7 & 9-2026"
+  const formatDPGroups = (list) => {
+    if (list.length === 0) return '';
+    const runs = []; // each: { dps:[...], year }
+    list.forEach(item => {
+      const last = runs[runs.length - 1];
+      if (last && last.year === item.year) last.dps.push(item.dp);
+      else runs.push({ dps: [item.dp], year: item.year });
+    });
+    const joinDPs = (dps) => {
+      if (dps.length === 1) return String(dps[0]);
+      if (dps.length === 2) return `${dps[0]} & ${dps[1]}`;
+      return `${dps.slice(0, -1).join(', ')} & ${dps[dps.length - 1]}`;
+    };
+    return runs.map(r => `${joinDPs(r.dps)}-${r.year}`).join(', ');
+  };
+
+  // Convenience for the singular-vs-plural prefix.
+  const dpPrefix = (list) => list.length === 1 ? 'DP' : 'DPs';
+
+  // Edge case: nothing was selected. Save a blank PDF using the same naming convention
+  // as a Watch bid, with "BLANK Bids" instead. Skip email/share entirely.
+  //   "99395, Sgt Dear, BLANK Bids for DPs 7, 8, 9-2026.pdf"
   if (isEmptyBid) {
-    const lastNameEarly = (name || '').split(',')[0].trim() || 'unsigned';
-    const rankShortEarly = rank === 'Sergeant' ? 'Sgt' : 'Ofcr';
-    const earlyFilename = `${serial || '00000'}, ${rankShortEarly} ${lastNameEarly}, blank APD-086.pdf`;
+    const allThreeEarly = dps.map(d => ({ dp: d.dp, year: d.year }));
+    const earlyFilename = `${namePart}, BLANK Bids for ${dpPrefix(allThreeEarly)} ${formatDPGroups(allThreeEarly)}.pdf`;
     doc.save(earlyFilename);
     toast('PDF generated (no bid data)');
     return;
@@ -2149,36 +2185,20 @@ function generateCombinedPDF() {
   });
   const hasAnyRDO = rdoDPs.length > 0;
 
-  // Format "DP X-yyyy" tokens, joined per spec:
-  //   1 DP:  "DP 7-2026"
-  //   2 DPs: "DPs 7-2026 & 8-2026"
-  //   3 DPs: "DPs 7-2026, 8-2026 & 9-2026"
-  const formatDPList = (list) => {
-    const tokens = list.map(x => `${x.dp}-${x.year}`);
-    if (tokens.length === 1) return `DP ${tokens[0]}`;
-    if (tokens.length === 2) return `DPs ${tokens[0]} & ${tokens[1]}`;
-    return `DPs ${tokens.slice(0, -1).join(', ')} & ${tokens[tokens.length - 1]}`;
-  };
-
-  // Build filename per spec:
-  //   No RDO: "99395, Sgt Dear, Watch bid, 2026 DPs 7,8,9"
-  //   RDO single DP: "99395, Sgt Dear, RDO bid, DP 7 2026"
-  //   RDO multi DP:  "99395, Sgt Dear, RDO bid, DPs 7 & 8 2026"
-  const lastName = name.split(',')[0].trim();
-  const rankShort = rank === 'Sergeant' ? 'Sgt' : 'Ofcr';
-  const namePart = `${serial}, ${rankShort} ${lastName}`;
+  // Build filename + email subject using the same year-only-at-end format.
+  //   Watch bid:    "99395, Sgt Dear, Watch Bid for DPs 7, 8, 9-2026.pdf"
+  //   RDO 1 DP:     "99395, Sgt Dear, RDO Bid for DP 7-2026.pdf"
+  //   RDO 2 DPs:    "99395, Sgt Dear, RDO Bid for DPs 7, 8-2026.pdf"
+  //   Year cross:   "99395, Sgt Dear, Watch Bid for DPs 13-2026, 1, 2-2027.pdf"
   let bidPart;
   if (hasAnyRDO) {
-    const justNumbers = rdoDPs.map(x => x.dp);
-    if (justNumbers.length === 1) {
-      bidPart = `RDO bid, DP ${justNumbers[0]} ${rdoDPs[0].year}`;
-    } else {
-      bidPart = `RDO bid, DPs ${justNumbers.join(' & ')} ${rdoDPs[0].year}`;
-    }
+    bidPart = `RDO Bid for ${dpPrefix(rdoDPs)} ${formatDPGroups(rdoDPs)}`;
   } else {
-    bidPart = `Watch bid, ${dps[0].year} DPs ${dps[0].dp},${dps[1].dp},${dps[2].dp}`;
+    const allThree = dps.map(d => ({ dp: d.dp, year: d.year }));
+    bidPart = `Watch Bid for ${dpPrefix(allThree)} ${formatDPGroups(allThree)}`;
   }
   const filename = `${namePart}, ${bidPart}.pdf`;
+  const subject = `${namePart}, ${bidPart}`;
 
   // Build recipient list based on what's in the bid:
   //  - No RDO selections (watch bid only) → PSSscheduling@lawa.org
@@ -2195,19 +2215,6 @@ function generateCombinedPDF() {
     recipients.push('PSSscheduling@lawa.org');
   }
 
-  // Build the email subject dynamically based on what's being submitted.
-  //   No RDO (watch only):  "99395, Sgt Dear, Watch Bid for DPs 7-2026, 8-2026 & 9-2026"
-  //   RDO 1 DP:             "99395, Sgt Dear, RDO Bid for DP 7-2026"
-  //   RDO 2 DPs:            "99395, Sgt Dear, RDO Bid for DPs 7-2026 & 8-2026"
-  //   RDO 3 DPs:            "99395, Sgt Dear, RDO Bid for DPs 7-2026, 8-2026 & 9-2026"
-  let subjectBidPart;
-  if (hasAnyRDO) {
-    subjectBidPart = `RDO Bid for ${formatDPList(rdoDPs)}`;
-  } else {
-    const allThree = dps.map(d => ({ dp: d.dp, year: d.year }));
-    subjectBidPart = `Watch Bid for ${formatDPList(allThree)}`;
-  }
-  const subject = `${namePart}, ${subjectBidPart}`;
   const body = `Submitting my Watch / Days-Off Bid for the period DP ${dps[0].dp}–${dps[2].dp} (${fmtMDDYYYY(dps[0].start)} – ${fmtMDDYYYY(dps[2].end)}).\n\nForm attached.`;
 
   shareOrFallbackPDF(doc, filename, recipients, subject, body);
