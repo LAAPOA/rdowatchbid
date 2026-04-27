@@ -24,7 +24,7 @@
     --rdo-light: #2e6ba1;
     --vac: #8b3a1f;
     --vac-light: #b04d2a;
-    --weekend: #d8d8dd;
+    --weekend: #ebe5d2;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -519,12 +519,25 @@
   .day .mark {
     position: absolute;
     bottom: 4px;
-    right: 6px;
+    left: 0;
+    right: 0;
+    text-align: center;
     font-family: 'Oswald', sans-serif;
     font-weight: 700;
-    font-size: 13px;
+    font-size: 14px;
     letter-spacing: 0.02em;
     z-index: 2;
+    color: white;
+    /* Heavy black outline so the code is high-contrast on any background */
+    text-shadow:
+      -1.2px -1.2px 0 #000,
+       1.2px -1.2px 0 #000,
+      -1.2px  1.2px 0 #000,
+       1.2px  1.2px 0 #000,
+       0    -1.2px 0 #000,
+       0     1.2px 0 #000,
+      -1.2px  0    0 #000,
+       1.2px  0    0 #000;
   }
   /* Holiday $ icon in top-right corner */
   .day .holiday-mark {
@@ -626,12 +639,18 @@
   }
   .day.v-1.s2-rdo .mark-2 { color: #c66432; } /* matches 2nd RDO orange */
   .day.v-1.s2-vac .mark-2 { color: #6b3a1f; } /* matches 2nd VC brown */
-  /* When the cell IS a 1st-choice fill (blue/crimson), show the 2nd cross-mark in a
+  .day.v-1.s2-other .mark-2 { color: #2a2a32; } /* matches 2nd "other" dark gray */
+  /* When the cell IS a 1st-choice fill (blue/crimson/dark gray), show the 2nd cross-mark in a
      light contrasting color so it remains visible. */
   .day.v-1.s1-rdo.s2-rdo .mark-2,
-  .day.v-1.s1-vac.s2-rdo .mark-2 { color: #ffae73; }
+  .day.v-1.s1-vac.s2-rdo .mark-2,
+  .day.v-1.s1-other.s2-rdo .mark-2 { color: #ffae73; }
   .day.v-1.s1-rdo.s2-vac .mark-2,
-  .day.v-1.s1-vac.s2-vac .mark-2 { color: #ffae73; }
+  .day.v-1.s1-vac.s2-vac .mark-2,
+  .day.v-1.s1-other.s2-vac .mark-2 { color: #ffae73; }
+  .day.v-1.s1-rdo.s2-other .mark-2,
+  .day.v-1.s1-vac.s2-other .mark-2,
+  .day.v-1.s1-other.s2-other .mark-2 { color: #b8b8c0; }
 
   /* In 2nd-choice view, mark-1 indicates a 1st-choice mark exists, colored in 1st blue */
   .day.v-2 .mark-1 {
@@ -647,11 +666,17 @@
   }
   .day.v-2.s1-rdo .mark-1 { color: #1a4d7a; }
   .day.v-2.s1-vac .mark-1 { color: var(--vac); }
+  .day.v-2.s1-other .mark-1 { color: #3a3a42; } /* matches 1st "other" dark gray */
   /* If the cell is a 2nd-choice fill, lighten the 1st cross-mark to remain visible. */
   .day.v-2.s2-rdo.s1-rdo .mark-1,
-  .day.v-2.s2-vac.s1-rdo .mark-1 { color: #7fb6ea; }
+  .day.v-2.s2-vac.s1-rdo .mark-1,
+  .day.v-2.s2-other.s1-rdo .mark-1 { color: #7fb6ea; }
   .day.v-2.s2-rdo.s1-vac .mark-1,
-  .day.v-2.s2-vac.s1-vac .mark-1 { color: #f0a48a; }
+  .day.v-2.s2-vac.s1-vac .mark-1,
+  .day.v-2.s2-other.s1-vac .mark-1 { color: #f0a48a; }
+  .day.v-2.s2-rdo.s1-other .mark-1,
+  .day.v-2.s2-vac.s1-other .mark-1,
+  .day.v-2.s2-other.s1-other .mark-1 { color: #b8b8c0; }
 
   /* In single view, hide the .mark element if it would overlap with the cross-choice
      indicator. .mark already shows for the active state via JS, in white-on-fill.
@@ -696,14 +721,21 @@
   .day.v-both .mark-1 {
     position: absolute;
     top: 4px;
-    right: 6px;
+    left: 0;
+    right: 0;
+    text-align: center;
     font-family: 'Oswald', sans-serif;
     font-weight: 700;
-    font-size: 10px;
+    font-size: 11px;
     color: white;
     z-index: 2;
     letter-spacing: 0.02em;
     display: none;
+    text-shadow:
+      -1px -1px 0 #000,  1px -1px 0 #000,
+      -1px  1px 0 #000,  1px  1px 0 #000,
+       0   -1px 0 #000,  0    1px 0 #000,
+      -1px  0   0 #000,  1px  0   0 #000;
   }
   .day.v-both .mark-2 {
     position: absolute;
@@ -718,10 +750,15 @@
     z-index: 2;
     letter-spacing: 0.02em;
     display: none;
+    text-shadow:
+      -1px -1px 0 #000,  1px -1px 0 #000,
+      -1px  1px 0 #000,  1px  1px 0 #000,
+       0   -1px 0 #000,  0    1px 0 #000,
+      -1px  0   0 #000,  1px  0   0 #000;
   }
   .day.v-both .mark { display: none; }
-  .day.v-both.s1-rdo .mark-1, .day.v-both.s1-vac .mark-1,
-  .day.v-both.s2-rdo .mark-2, .day.v-both.s2-vac .mark-2 { display: block; }
+  .day.v-both.s1-rdo .mark-1, .day.v-both.s1-vac .mark-1, .day.v-both.s1-other .mark-1,
+  .day.v-both.s2-rdo .mark-2, .day.v-both.s2-vac .mark-2, .day.v-both.s2-other .mark-2 { display: block; }
 
   /* Hover highlight for click halves (both view only) */
   .day.v-both .half-hint-top, .day.v-both .half-hint-bot {
@@ -882,7 +919,7 @@
     .day { min-height: 52px; padding: 4px 5px; }
     .day .num { font-size: 16px; }
     .day .date { font-size: 10px; }
-    .day .mark { font-size: 13px; bottom: 2px; right: 4px; }
+    .day .mark { font-size: 12px; bottom: 2px; }
     .day-head { font-size: 9px; padding: 6px 2px; letter-spacing: 0.08em; }
     .mode-btn { flex: 1; padding: 10px 12px; font-size: 13px; }
   }
