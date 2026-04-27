@@ -1381,6 +1381,31 @@ function holidayFor(d) {
   return holidayCache.get(yr).get(key) || null;
 }
 
+// 2-letter codes for holidays — used on the BLANK PDF and legend.
+// Picked to avoid collisions with state codes (RDO, VC, M/L, H, JD, FL, SK).
+const HOLIDAY_CODES = [
+  ["New Year's Day",   "NY"],
+  ["MLK Jr. Day",      "MK"],
+  ["Presidents' Day",  "PR"],
+  ["Easter Sunday",    "EA"],
+  ["Memorial Day",     "ME"],
+  ["Juneteenth",       "JT"],
+  ["Independence Day", "IN"],
+  ["Labor Day",        "LB"],
+  ["Columbus Day",     "CO"],
+  ["Veteran's Day",    "VT"],
+  ["Thanksgiving Day", "TG"],
+  ["Christmas Eve",    "XE"],
+  ["Christmas Day",    "XD"],
+  ["New Year's Eve",   "NE"],
+];
+const HOLIDAY_CODE_BY_NAME = Object.fromEntries(HOLIDAY_CODES.map(([n,c]) => [n, c]));
+function holidayCodeFor(d) {
+  const h = holidayFor(d);
+  if (!h) return '';
+  return HOLIDAY_CODE_BY_NAME[h.name] || '';
+}
+
 /* ============================================================
    Determining which DP each slot represents
    When "Match Watch Bid Period" is on (default), slot N = watch starting DP + N
@@ -1940,7 +1965,35 @@ const BORDER_GRAY = 90;     // line color for table borders
 const FAINT_FILL = 235;     // light gray header fill
 
 
-function pdfDrawFooter(doc, y) {
+function pdfDrawFooter(doc, y, includeHolidayLegend) {
+  // Optional holiday-code legend, rendered above the standard symbol legend.
+  // Only used on the BLANK PDF.
+  if (includeHolidayLegend) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6);
+    doc.setTextColor(80, 80, 80);
+    // Compact names so all 14 fit on one centered line within page width.
+    const compactNames = {
+      "New Year's Day":   "New Year",
+      "MLK Jr. Day":      "MLK",
+      "Presidents' Day":  "Presidents'",
+      "Easter Sunday":    "Easter",
+      "Memorial Day":     "Memorial",
+      "Juneteenth":       "Juneteenth",
+      "Independence Day": "Independence",
+      "Labor Day":        "Labor",
+      "Columbus Day":     "Columbus",
+      "Veteran's Day":    "Veterans",
+      "Thanksgiving Day": "Thanksgiving",
+      "Christmas Eve":    "Xmas Eve",
+      "Christmas Day":    "Christmas",
+      "New Year's Eve":   "NYE",
+    };
+    const legendText = HOLIDAY_CODES
+      .map(([n, c]) => `${c}-${compactNames[n] || n}`)
+      .join(' · ');
+    doc.text(legendText, PG_W / 2, y, { align: 'center' });
+  }
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(0, 0, 0);
@@ -2098,7 +2151,13 @@ function generateCombinedPDF() {
         const rows = [ slot.days.map(d => symFor(d.state1)) ];
         const has2 = slot.days.some(d => d.state2 !== 'work');
         if (has2) rows.push(slot.days.map(d => symFor(d.state2)));
-        return padMarks(rows, 4);
+        const padded = padMarks(rows, 4);
+        // BLANK mode: stuff the 3rd mark row (index 2) with 2-letter holiday codes
+        // for any cell whose date falls on a paid or federal holiday.
+        if (isEmptyBid) {
+          padded[2] = slot.days.map(d => holidayCodeFor(d.date));
+        }
+        return padded;
       })()
     });
     slips.push({ y: slipY, h: FORM_H_RDO });
@@ -2125,7 +2184,7 @@ function generateCombinedPDF() {
   }
 
   // Single footer at the very bottom of the page
-  pdfDrawFooter(doc, PG_H - PAGE_MARGIN - 14);
+  pdfDrawFooter(doc, PG_H - PAGE_MARGIN - 14, isEmptyBid);
 
   // ---- Filename + email-subject helpers ----
   const lastName = (name || '').split(',')[0].trim() || 'unsigned';
@@ -2220,24 +2279,15 @@ function generateCombinedPDF() {
   shareOrFallbackPDF(doc, filename, recipients, subject, body);
 }
 
-// Try Web Share API with file attached (mobile, file ATTACHED). If unavailable, fall
-// back to downloading the PDF + opening a mailto: with the recipient pre-filled in To:.
-// If the user CANCELS the Web Share sheet, also fall back to mailto so they get the
-// recipient pre-filled — they just won't have the file pre-attached.
+// Email handoff strategy:
+//   • Mobile (Web Share API with file support) → share sheet with PDF attached;
+//     recipient is passed via `text` field. If the user cancels, we still open mailto
+//     so they get the recipient pre-filled in the To: field.
+//   • Desktop (no file-share support) → just download the PDF locally. No mailto,
+//     no email prep — the officer attaches and addresses manually from their mail app.
 async function shareOrFallbackPDF(doc, filename, recipients, subject, body) {
   const blob = doc.output('blob');
   const file = new File([blob], filename, { type: 'application/pdf' });
-
-  const openMailtoWithDownload = () => {
-    // Download PDF + open mailto: with recipient pre-filled in To: field.
-    // mailto:to=...?subject=...&body=... — the recipient is guaranteed in To:.
-    const mailto = `mailto:${encodeURIComponent(recipients.join(','))}` +
-      `?subject=${encodeURIComponent(subject)}` +
-      `&body=${encodeURIComponent(body + `\n\n(Please attach the downloaded ${filename})`)}`;
-    window.location.href = mailto;
-    setTimeout(() => { doc.save(filename); }, 200);
-    toast('PDF downloading — attach it to the email');
-  };
 
   // Web Share API path — works on iOS/Android Safari/Chrome with file support.
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -2250,15 +2300,22 @@ async function shareOrFallbackPDF(doc, filename, recipients, subject, body) {
       toast('PDF ready to send');
       return;
     } catch (err) {
-      // User cancelled the share sheet, OR another error. Either way, fall through
-      // to mailto: so they get the recipient guaranteed in To:.
-      openMailtoWithDownload();
+      // User cancelled the share sheet OR an error — fall through to mailto so they
+      // still get the recipient pre-filled in To:.
+      const mailto = `mailto:${encodeURIComponent(recipients.join(','))}` +
+        `?subject=${encodeURIComponent(subject)}` +
+        `&body=${encodeURIComponent(body + `\n\n(Please attach the downloaded ${filename})`)}`;
+      window.location.href = mailto;
+      setTimeout(() => { doc.save(filename); }, 200);
+      toast('PDF downloading — attach it to the email');
       return;
     }
   }
 
-  // No Web Share file support (desktop, etc.) — go straight to mailto:.
-  openMailtoWithDownload();
+  // Desktop / no file-share support → just download the PDF. The officer handles
+  // emailing themselves.
+  doc.save(filename);
+  toast('PDF downloaded');
 }
 
 function generateWatchPDF() { generateCombinedPDF(); }
