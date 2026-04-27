@@ -2109,14 +2109,27 @@ function generateCombinedPDF() {
   // Single footer at the very bottom of the page
   pdfDrawFooter(doc, PG_H - PAGE_MARGIN - 14);
 
-  // Determine which DPs have RDO selections (used for filename + email routing)
+  // Determine which DPs have RDO selections (used for filename + email routing).
+  // Track each as { dp, year } so subject lines can show DP X-yyyy correctly when DPs
+  // span a year boundary (e.g. DP 13/2026 & DP 1/2027).
   const rdoDPs = [];
   rdoSlots.forEach((slot, idx) => {
     if (slot.days.some(d => d.state1 !== 'work' || d.state2 !== 'work')) {
-      rdoDPs.push(dps[idx].dp);
+      rdoDPs.push({ dp: dps[idx].dp, year: dps[idx].year });
     }
   });
   const hasAnyRDO = rdoDPs.length > 0;
+
+  // Format "DP X-yyyy" tokens, joined per spec:
+  //   1 DP:  "DP 7-2026"
+  //   2 DPs: "DPs 7-2026 & 8-2026"
+  //   3 DPs: "DPs 7-2026, 8-2026 & 9-2026"
+  const formatDPList = (list) => {
+    const tokens = list.map(x => `${x.dp}-${x.year}`);
+    if (tokens.length === 1) return `DP ${tokens[0]}`;
+    if (tokens.length === 2) return `DPs ${tokens[0]} & ${tokens[1]}`;
+    return `DPs ${tokens.slice(0, -1).join(', ')} & ${tokens[tokens.length - 1]}`;
+  };
 
   // Build filename per spec:
   //   No RDO: "99395, Sgt Dear, Watch bid, 2026 DPs 7,8,9"
@@ -2127,10 +2140,11 @@ function generateCombinedPDF() {
   const namePart = `${serial}, ${rankShort} ${lastName}`;
   let bidPart;
   if (hasAnyRDO) {
-    if (rdoDPs.length === 1) {
-      bidPart = `RDO bid, DP ${rdoDPs[0]} ${dps[0].year}`;
+    const justNumbers = rdoDPs.map(x => x.dp);
+    if (justNumbers.length === 1) {
+      bidPart = `RDO bid, DP ${justNumbers[0]} ${rdoDPs[0].year}`;
     } else {
-      bidPart = `RDO bid, DPs ${rdoDPs.join(' & ')} ${dps[0].year}`;
+      bidPart = `RDO bid, DPs ${justNumbers.join(' & ')} ${rdoDPs[0].year}`;
     }
   } else {
     bidPart = `Watch bid, ${dps[0].year} DPs ${dps[0].dp},${dps[1].dp},${dps[2].dp}`;
@@ -2151,7 +2165,20 @@ function generateCombinedPDF() {
   } else {
     recipients.push('PSSscheduling@lawa.org');
   }
-  const subject = `${rankAbbr} ${name} (#${serial}) — APD-086 Watch/Days-Off Bid (DP ${dps[0].dp}-${dps[2].dp} ${dps[0].year})`;
+
+  // Build the email subject dynamically based on what's being submitted.
+  //   No RDO (watch only):  "99395, Sgt Dear, Watch Bid for DPs 7-2026, 8-2026 & 9-2026"
+  //   RDO 1 DP:             "99395, Sgt Dear, RDO Bid for DP 7-2026"
+  //   RDO 2 DPs:            "99395, Sgt Dear, RDO Bid for DPs 7-2026 & 8-2026"
+  //   RDO 3 DPs:            "99395, Sgt Dear, RDO Bid for DPs 7-2026, 8-2026 & 9-2026"
+  let subjectBidPart;
+  if (hasAnyRDO) {
+    subjectBidPart = `RDO Bid for ${formatDPList(rdoDPs)}`;
+  } else {
+    const allThree = dps.map(d => ({ dp: d.dp, year: d.year }));
+    subjectBidPart = `Watch Bid for ${formatDPList(allThree)}`;
+  }
+  const subject = `${namePart}, ${subjectBidPart}`;
   const body = `Submitting my Watch / Days-Off Bid for the period DP ${dps[0].dp}–${dps[2].dp} (${fmtMDDYYYY(dps[0].start)} – ${fmtMDDYYYY(dps[2].end)}).\n\nForm attached.`;
 
   shareOrFallbackPDF(doc, filename, recipients, subject, body);
