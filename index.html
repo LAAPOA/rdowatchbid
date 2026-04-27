@@ -2289,8 +2289,13 @@ async function shareOrFallbackPDF(doc, filename, recipients, subject, body) {
   const blob = doc.output('blob');
   const file = new File([blob], filename, { type: 'application/pdf' });
 
-  // Web Share API path — works on iOS/Android Safari/Chrome with file support.
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+  // Detect if we're on an actual mobile device. Web Share API on desktop browsers
+  // (Chrome on Windows in particular) reports support but routes through OS share
+  // dialogs that mishandle file attachments — producing "no_name" errors when sent
+  // to mail clients. Restricting to true mobile UAs avoids this.
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
+  if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({
         files: [file],
@@ -2312,7 +2317,7 @@ async function shareOrFallbackPDF(doc, filename, recipients, subject, body) {
     }
   }
 
-  // Desktop / no file-share support → just download the PDF. The officer handles
+  // Desktop (or any non-mobile context) → just download the PDF. The officer handles
   // emailing themselves.
   doc.save(filename);
   toast('PDF downloaded');
