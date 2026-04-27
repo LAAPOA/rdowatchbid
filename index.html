@@ -1506,7 +1506,7 @@ function buildSlotPanel(slotIdx) {
         <div class="legend-item"><span class="swatch vac2">VC</span>2nd Vac</div>
         <div class="legend-item"><span class="swatch holiday">$</span>MOU 30/39 Paid Holiday</div>
         <div class="legend-item"><span class="swatch fed-holiday">FED</span>Federal (unpaid)</div>
-        <div class="legend-item" style="font-style: italic; color: var(--ink-soft);">Long-press / right-click for M/L · H · JD · FL · SK</div>
+        <div class="legend-item" style="font-style: italic; color: var(--ink-soft);">Long-press / right-click for T · M/L · H · JD · FL · SK</div>
       </div>
       <div class="calendar">
         <div class="day-head">Sun</div>
@@ -1640,6 +1640,7 @@ const STATE_DEFS = [
   ['work', '',       '',         'Clear',              null],
   ['rdo',  'RDO',    'O',        'Regular Day Off',    'fill-rdo'],
   ['vac',  'VC',     'V',        'Vacation',           'fill-vac'],
+  ['t',    'T',      'T',        'Training',           'fill-other'],
   ['ml',   'M/L',    'M/L',      'Military Leave',     'fill-other'],
   ['h',    'H',      'H',        'Holiday',            'fill-other'],
   ['jd',   'JD',     'JD',       'Jury Duty',          'fill-other'],
@@ -1652,8 +1653,8 @@ function statePdfSym(code) { return STATE_BY_CODE[code]?.pdfSym || ''; }
 function stateFill(code) { return STATE_BY_CODE[code]?.fill || null; }
 
 // Context menu: codes shown when long-pressing / right-clicking a half-cell.
-// M/L at top per spec; "Clear" at bottom resets to work.
-const CTX_MENU_CODES = ['ml', 'h', 'jd', 'fl', 'sk', 'work'];
+// T (Training) at top, then M/L, etc.; "Clear" at bottom resets to work.
+const CTX_MENU_CODES = ['t', 'ml', 'h', 'jd', 'fl', 'sk', 'work'];
 
 function cycleDay(slotIdx, idx, choice) {
   const cd = rdoSlots[slotIdx].days[idx];
@@ -2000,7 +2001,7 @@ function pdfDrawFooter(doc, y, includeHolidayLegend) {
   doc.text('APD FORM 086', PAGE_MARGIN, y + 12);
   doc.setFontSize(7.5);
   doc.text(
-    'Symbols: O-Regular; H - Holiday; V - Vacation; M/L - Military Leave; JD - Jury Duty; FL - Family Leave; SK - Sick',
+    'Symbols: O-Regular; H - Holiday; V - Vacation; T - Training; M/L - Military Leave; JD - Jury Duty; FL - Family Leave; SK - Sick',
     PG_W / 2, y + 12, { align: 'center' }
   );
 }
@@ -2147,6 +2148,8 @@ function generateCombinedPDF() {
       firstChoice: '',
       secondChoice: '',
       dateRows: [ slot.days.map(d => d.date) ],
+      // Per-slip mini legend at the bottom — RDO slips only (Watch BID slip omits it).
+      showLegend: true,
       markRows: (() => {
         const rows = [ slot.days.map(d => symFor(d.state1)) ];
         const has2 = slot.days.some(d => d.state2 !== 'work');
@@ -2405,6 +2408,17 @@ function drawAPD086(doc, y, h, data) {
     drawMarkRow(doc, x, cy, w, markRowH, cellW, markRow);
     cy += markRowH;
   });
+
+  // Optional per-slip mini legend, drawn just above the bottom inner border.
+  // Used on RDO slips so the cutaway/separated slip has its own self-contained legend.
+  if (data.showLegend) {
+    const legendY = contentBottomY - 1;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(5.4);
+    doc.setTextColor(70, 70, 70);
+    const legendText = 'O-Regular · V-Vacation · T-Training · M/L-Military Leave · H-Holiday · JD-Jury Duty · FL-Family Leave · SK-Sick';
+    doc.text(legendText, PG_W / 2, legendY, { align: 'center' });
+  }
 }
 
 function drawOfficerRow(doc, x, y, w, rowH, data) {
