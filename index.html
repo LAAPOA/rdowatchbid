@@ -2002,10 +2002,12 @@ function generateCombinedPDF() {
 
   const watch1 = watchState.c1 != null ? `Watch ${watchState.c1}` : '';
   const watch2 = watchState.c2 != null ? `Watch ${watchState.c2}` : '';
+  const hasWatchBid = watch1 !== '' || watch2 !== '';
   const symFor = (s) => statePdfSym(s);
 
   // Determine which forms to render.
-  // Watch BID is always present. DPs 1-3 are included only if they have any RDO/VC selections.
+  //  - Watch BID slip prints only if at least one watch choice (1st or 2nd) is set.
+  //  - DPs 1..3 are included only if they have any RDO/VC selections.
   const includedDPs = []; // array of slot indices
   for (let s = 0; s < 3; s++) {
     const slot = rdoSlots[s];
@@ -2013,6 +2015,11 @@ function generateCombinedPDF() {
       includedDPs.push(s);
     }
   }
+
+  // Edge case: if nothing is selected, still generate a (mostly empty) PDF and skip
+  // the email/share flow entirely. Just download the file. The flag below tells the
+  // share routine downstream to bypass email prep.
+  const isEmptyBid = !hasWatchBid && includedDPs.length === 0;
 
   const doc = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'portrait' });
 
@@ -2030,38 +2037,53 @@ function generateCombinedPDF() {
     return out;
   };
 
-  // Form 1: Watch BID — 3-DP combined
   // Mark row spells out "WATCH BID" with one letter per cell, exactly as on the sample form.
   // Letters at cell indices: 8=W, 9=A, 10=T, 11=C, 12=H, gap at 13, 14=B, 15=I, 16=D
   const watchBidLabelRow = new Array(28).fill('');
   ['W','A','T','C','H'].forEach((ch, i) => watchBidLabelRow[8 + i] = ch);
   ['B','I','D'].forEach((ch, i) => watchBidLabelRow[14 + i] = ch);
 
-  drawAPD086(doc, PAGE_MARGIN + 4, FORM_H_WATCH, {
-    name: nameWithRank, serial, curWatch,
-    dpHeader: 'DP#s',
-    dpRange: `${dps[0].dp} - ${dps[2].dp}`,
-    startDate: fmtMDDYYYY(dps[0].start),
-    endDate: fmtMDDYYYY(dps[2].end),
-    firstChoice: watch1,
-    secondChoice: watch2,
-    dateRows: dps.map(info => {
-      const arr = [];
-      for (let i = 0; i < 28; i++) {
-        const d = new Date(info.start);
-        d.setDate(d.getDate() + i);
-        arr.push(d);
-      }
-      return arr;
-    }),
-    markRows: padMarks([ watchBidLabelRow ], 1)
-  });
+  // Build the slip list dynamically with cumulative Y positions.
+  // Empty-bid mode: force-print all four slips (Watch BID + DP1 + DP2 + DP3) blank
+  // so the officer can hand-fill them. In non-empty mode, omit the slips that have
+  // no data per the existing rules.
+  const slips = []; // { y, h }
+  let cy = PAGE_MARGIN + 4;
 
-  // Forms 2..N: only included DPs, stacked tightly after the Watch BID slip.
-  includedDPs.forEach((slotIdx, i) => {
+  // Watch BID slip prints if the user picked a watch choice OR if nothing was picked
+  // anywhere (empty-bid hand-fill mode).
+  if (hasWatchBid || isEmptyBid) {
+    const slipY = cy;
+    drawAPD086(doc, slipY, FORM_H_WATCH, {
+      name: nameWithRank, serial, curWatch,
+      dpHeader: 'DP#s',
+      dpRange: `${dps[0].dp} - ${dps[2].dp}`,
+      startDate: fmtMDDYYYY(dps[0].start),
+      endDate: fmtMDDYYYY(dps[2].end),
+      firstChoice: watch1,
+      secondChoice: watch2,
+      dateRows: dps.map(info => {
+        const arr = [];
+        for (let i = 0; i < 28; i++) {
+          const d = new Date(info.start);
+          d.setDate(d.getDate() + i);
+          arr.push(d);
+        }
+        return arr;
+      }),
+      markRows: padMarks([ watchBidLabelRow ], 1)
+    });
+    slips.push({ y: slipY, h: FORM_H_WATCH });
+    cy += FORM_H_WATCH;
+  }
+
+  // RDO slips: included DPs, OR all three DPs in empty-bid hand-fill mode.
+  // RDO forms: 1st/2nd CHOICE boxes left blank — they are only used on the Watch BID.
+  const dpIndicesToPrint = isEmptyBid ? [0, 1, 2] : includedDPs;
+  dpIndicesToPrint.forEach((slotIdx) => {
     const slot = rdoSlots[slotIdx];
     const info = dps[slotIdx];
-    const slipY = PAGE_MARGIN + 4 + FORM_H_WATCH + FORM_H_RDO * i;
+    const slipY = cy;
 
     drawAPD086(doc, slipY, FORM_H_RDO, {
       name: nameWithRank, serial, curWatch,
@@ -2079,16 +2101,13 @@ function generateCombinedPDF() {
         return padMarks(rows, 4);
       })()
     });
+    slips.push({ y: slipY, h: FORM_H_RDO });
+    cy += FORM_H_RDO;
   });
 
-  // Dashed "cut here" line between each slip (after each form except the last).
-  const totalSlips = 1 + includedDPs.length;
-  for (let i = 0; i < totalSlips - 1; i++) {
-    // Line lives at the boundary between slip i and slip i+1.
-    // Slip 0 = Watch BID (height FORM_H_WATCH); slips 1..N = RDO (height FORM_H_RDO).
-    const lineY = i === 0
-      ? PAGE_MARGIN + 4 + FORM_H_WATCH
-      : PAGE_MARGIN + 4 + FORM_H_WATCH + FORM_H_RDO * i;
+  // Dashed "cut here" line at each slip boundary (between slip i and i+1).
+  for (let i = 0; i < slips.length - 1; i++) {
+    const lineY = slips[i].y + slips[i].h;
     doc.setLineDashPattern([3, 3], 0);
     doc.setDrawColor(140, 140, 140);
     doc.setLineWidth(0.5);
@@ -2098,7 +2117,6 @@ function generateCombinedPDF() {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
     doc.setTextColor(140, 140, 140);
-    // White rectangle to "punch out" a gap in the dashed line behind the text
     const labelText = '✂  cut here';
     const labelW = doc.getTextWidth(labelText) + 8;
     doc.setFillColor(255, 255, 255);
@@ -2108,6 +2126,17 @@ function generateCombinedPDF() {
 
   // Single footer at the very bottom of the page
   pdfDrawFooter(doc, PG_H - PAGE_MARGIN - 14);
+
+  // Edge case: nothing was selected. Save a blank-ish PDF directly and skip the email
+  // routing entirely (no subject, no recipient inference, no Web Share / mailto).
+  if (isEmptyBid) {
+    const lastNameEarly = (name || '').split(',')[0].trim() || 'unsigned';
+    const rankShortEarly = rank === 'Sergeant' ? 'Sgt' : 'Ofcr';
+    const earlyFilename = `${serial || '00000'}, ${rankShortEarly} ${lastNameEarly}, blank APD-086.pdf`;
+    doc.save(earlyFilename);
+    toast('PDF generated (no bid data)');
+    return;
+  }
 
   // Determine which DPs have RDO selections (used for filename + email routing).
   // Track each as { dp, year } so subject lines can show DP X-yyyy correctly when DPs
