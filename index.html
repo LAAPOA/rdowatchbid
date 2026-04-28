@@ -201,6 +201,74 @@
     background: white;
   }
 
+  /* ===== BID MODE TOGGLE ===== */
+  .bid-mode-toggle {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    margin: 4px 0 12px;
+  }
+  .bid-mode-toggle .bm-opt {
+    background: transparent;
+    border: none;
+    color: var(--ink-soft);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 16px;
+    cursor: pointer;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .bid-mode-toggle .bm-opt.active {
+    background: var(--ink-deep);
+    color: var(--gold-bright);
+  }
+  .bid-mode-toggle .bm-opt:not(.active):hover {
+    color: var(--ink-deep);
+  }
+
+  /* ===== FULL-YEAR WATCH GROUP CARDS ===== */
+  .fy-watch-groups {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .fy-watch-group {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 14px 16px 16px;
+    background: var(--paper);
+  }
+  .fy-watch-group .fy-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 12px;
+  }
+  .fy-watch-group .fy-head .fy-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--ink-deep);
+  }
+  .fy-watch-group .fy-head .fy-range {
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+  .fy-watch-group .watch-options {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .fy-watch-group .watch-opt {
+    padding: 12px 8px 0;
+    min-height: 78px;
+  }
+  .fy-watch-group .watch-opt .w-num { font-size: 32px; }
+  .fy-watch-group .watch-opt .w-label { font-size: 11px; }
+  .fy-watch-group .watch-opt .w-status { font-size: 10px; padding: 4px 0; }
+
   /* ===== WATCH PICKER ===== */
   .watch-options {
     display: grid;
@@ -313,12 +381,20 @@
   }
   .rdo-slot-head .slot-label {
     font-family: 'Oswald', sans-serif;
-    font-size: 14px;
-    letter-spacing: 0.08em;
+    font-size: 22px;
+    line-height: 1;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
-    font-weight: 600;
-    color: var(--gold-bright);
-    margin-right: 8px;
+    font-weight: 700;
+    color: var(--navy);
+    background: var(--gold-bright);
+    padding: 8px 14px;
+    border-radius: 4px;
+    margin-right: 4px;
+    /* Reserve consistent width for "DP NN" so 1- and 2-digit numbers align tidily. */
+    min-width: 78px;
+    text-align: center;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.15);
   }
   .rdo-slot-head .slot-dp {
     font-family: 'Oswald', sans-serif;
@@ -330,6 +406,24 @@
     color: var(--gold-bright);
     font-weight: 700;
     margin: 0 4px;
+  }
+  .rdo-slot-head .apply-all-btn {
+    margin-left: auto;
+    background: transparent;
+    color: var(--gold-bright);
+    border: 1px solid var(--gold-bright);
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .rdo-slot-head .apply-all-btn:hover {
+    background: var(--gold-bright);
+    color: var(--navy);
   }
   .rdo-slot-body {
     padding: 16px;
@@ -984,29 +1078,49 @@
       </div>
     </div>
 
+    <!-- BID MODE TOGGLE: single period vs full year -->
+    <div class="bid-mode-toggle" id="bid-mode-toggle" role="tablist" aria-label="Bid mode">
+      <button type="button" class="bm-opt active" data-mode="single" role="tab" aria-selected="true">Single Period</button>
+      <button type="button" class="bm-opt" data-mode="fullYear" role="tab" aria-selected="false">Full Year</button>
+    </div>
+
+    <!-- Full-year mode: year picker (only DP 1 of selected year) -->
+    <div class="field full" id="w-year-wrap" style="display:none; margin-top: 8px;">
+      <label for="w-year">Year</label>
+      <select id="w-year"></select>
+    </div>
+
     <div class="dp-range" id="w-range">
       <strong>Bid Period:</strong>
       <div class="dp-range-list" id="w-range-list">—</div>
     </div>
 
-    <label style="display:block; margin-bottom: 10px;">Requested Watch Assignment (entire 3-DP period)</label>
+    <!-- Single-period watch picker (default) -->
+    <div id="watch-single">
+      <label style="display:block; margin-bottom: 10px;">Requested Watch Assignment (entire bid period)</label>
+      <div class="watch-options">
+        <div class="watch-opt" data-w="1">
+          <div class="w-num">1</div>
+          <div class="w-label">Watch One</div>
+          <div class="w-status">— Not Selected —</div>
+        </div>
+        <div class="watch-opt" data-w="2">
+          <div class="w-num">2</div>
+          <div class="w-label">Watch Two</div>
+          <div class="w-status">— Not Selected —</div>
+        </div>
+        <div class="watch-opt" data-w="3">
+          <div class="w-num">3</div>
+          <div class="w-label">Watch Three</div>
+          <div class="w-status">— Not Selected —</div>
+        </div>
+      </div>
+    </div>
 
-    <div class="watch-options">
-      <div class="watch-opt" data-w="1">
-        <div class="w-num">1</div>
-        <div class="w-label">Watch One</div>
-        <div class="w-status">— Not Selected —</div>
-      </div>
-      <div class="watch-opt" data-w="2">
-        <div class="w-num">2</div>
-        <div class="w-label">Watch Two</div>
-        <div class="w-status">— Not Selected —</div>
-      </div>
-      <div class="watch-opt" data-w="3">
-        <div class="w-num">3</div>
-        <div class="w-label">Watch Three</div>
-        <div class="w-status">— Not Selected —</div>
-      </div>
+    <!-- Full-year watch pickers (4 cards, one per DP group) -->
+    <div id="watch-fullyear" style="display:none;">
+      <label style="display:block; margin-bottom: 10px;">Requested Watch Assignment per DP Group</label>
+      <div class="fy-watch-groups" id="fy-watch-groups"><!-- populated by JS --></div>
     </div>
 
     <div class="field full" style="margin-top: 24px;">
@@ -1108,56 +1222,53 @@ function fmtDateLong(d) {
    POPULATE DP DROPDOWNS
    ============================================================ */
 
-// Watch form: group DPs into triples. Walk backward from anchor to capture any
-// in-progress earlier triple, then forward from anchor across future periods.
+// Bid mode: "single" (today's default — pick one watch for the bid period) or
+// "fullYear" (4 watch picks, one per DP group; RDO panel shows all 13 DPs).
+// Declared early because several helper functions (updateWatchRange, getRDOStartDP,
+// numDPsInGroup) branch on it.
+let bidMode = 'single';
+function isFullYear() { return bidMode === 'fullYear'; }
+
+// Watch form: group DPs by year as 1-3, 4-6, 7-9, 10-13. The last group of each
+// year contains 4 DPs; all others have 3. Groups never cross a year boundary.
+function dpGroupForYearAndStartDP(dpNum) {
+  // Returns [startDP, endDP] for the group containing dpNum.
+  if (dpNum <= 3) return [1, 3];
+  if (dpNum <= 6) return [4, 6];
+  if (dpNum <= 9) return [7, 9];
+  return [10, 13];
+}
+
 function buildWatchDPOptions(selectEl) {
   selectEl.innerHTML = '';
   const now = new Date();
 
-  const triples = [];
-
-  // Walk backward up to 4 triples (≈ 1 year prior). Include any whose final DP
-  // hasn't ended yet (still relevant for a current bid).
-  for (let back = 4; back >= 1; back--) {
-    let dp = DP_ANCHOR.dp;
-    let yr = DP_ANCHOR.year;
-    // step backward by `back * 3` DPs
-    for (let s = 0; s < back * 3; s++) {
-      dp -= 1;
-      if (dp < 1) { dp = 13; yr -= 1; }
-    }
-    const group = [];
-    for (let j = 0; j < 3; j++) {
-      group.push(getDPInfo(dp, yr));
-      dp += 1;
-      if (dp > 13) { dp = 1; yr += 1; }
-    }
-    triples.push(group);
+  // Build a list of all groups across the years we care about: from 1 year before
+  // the anchor through ~4 years after.
+  const groups = [];
+  const startYear = DP_ANCHOR.year - 1;
+  const endYear = DP_ANCHOR.year + 4;
+  for (let yr = startYear; yr <= endYear; yr++) {
+    [[1, 3], [4, 6], [7, 9], [10, 13]].forEach(([first, last]) => {
+      const dpsInGroup = [];
+      for (let dp = first; dp <= last; dp++) dpsInGroup.push(getDPInfo(dp, yr));
+      groups.push(dpsInGroup);
+    });
   }
 
-  // Walk forward 16 triples from anchor
-  let dp = DP_ANCHOR.dp;
-  let yr = DP_ANCHOR.year;
-  for (let i = 0; i < 16; i++) {
-    const group = [];
-    for (let j = 0; j < 3; j++) {
-      group.push(getDPInfo(dp, yr));
-      dp += 1;
-      if (dp > 13) { dp = 1; yr += 1; }
-    }
-    triples.push(group);
-  }
-
-  triples.forEach(g => {
-    // skip groups whose final DP ended before today
-    if (g[2].end < now) return;
+  groups.forEach(g => {
+    // Skip groups whose final DP ended before today.
+    if (g[g.length - 1].end < now) return;
     const opt = document.createElement('option');
     opt.value = `${g[0].dp}-${g[0].year}`;
-    opt.textContent = `DP ${g[0].dp}–${g[2].dp} • ${g[0].year}${g[2].year !== g[0].year ? '/' + g[2].year : ''} (${fmtDate(g[0].start)} – ${fmtDate(g[2].end)})`;
+    const dpLabel = `DP ${g[0].dp}–${g[g.length - 1].dp}`;
+    opt.textContent = `${dpLabel} • ${g[0].year} (${fmtDate(g[0].start)} – ${fmtDate(g[g.length - 1].end)})`;
     selectEl.appendChild(opt);
   });
-  // default to the anchor triple (DP7/2026), or first option if anchor isn't there
-  const defaultVal = `${DP_ANCHOR.dp}-${DP_ANCHOR.year}`;
+
+  // Default: anchor's containing group (DP 7-9 of 2026 currently).
+  const [anchorFirst] = dpGroupForYearAndStartDP(DP_ANCHOR.dp);
+  const defaultVal = `${anchorFirst}-${DP_ANCHOR.year}`;
   const anchorOpt = Array.from(selectEl.options).find(o => o.value === defaultVal);
   if (anchorOpt) anchorOpt.selected = true;
   else if (selectEl.options.length > 0) selectEl.selectedIndex = 0;
@@ -1209,19 +1320,155 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
    ============================================================ */
 const wRangeList = document.getElementById('w-range-list');
 function updateWatchRange() {
+  if (isFullYear()) {
+    // In full-year mode the range is implied by the year picker; covers all 13 DPs.
+    const yr = +wYearSel.value;
+    const first = getDPInfo(1, yr);
+    const last = getDPInfo(13, yr);
+    wRangeList.innerHTML = `${fmtDate(first.start)} through ${fmtDate(last.end)}<br>` +
+      `<span style="font-size:12px;">All 13 DPs of ${yr}</span>`;
+    return;
+  }
   const [dp, yr] = wStartDP.value.split('-').map(Number);
+  const [first, last] = dpGroupForYearAndStartDP(dp);
+  const n = last - first + 1;
   const dps = [];
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < n; i++) {
     let curDP = dp + i;
     let curYr = yr;
     if (curDP > 13) { curDP -= 13; curYr += 1; }
     dps.push(getDPInfo(curDP, curYr));
   }
-  const rangeStr = `${fmtDate(dps[0].start)} through ${fmtDate(dps[2].end)}`;
-  wRangeList.innerHTML = `${rangeStr}<br><span style="font-size:12px;">DP ${dps[0].dp}/${dps[0].year} • DP ${dps[1].dp}/${dps[1].year} • DP ${dps[2].dp}/${dps[2].year}</span>`;
+  const rangeStr = `${fmtDate(dps[0].start)} through ${fmtDate(dps[n - 1].end)}`;
+  const dpListStr = dps.map(d => `DP ${d.dp}/${d.year}`).join(' • ');
+  wRangeList.innerHTML = `${rangeStr}<br><span style="font-size:12px;">${dpListStr}</span>`;
 }
 wStartDP.addEventListener('change', updateWatchRange);
 updateWatchRange();
+
+/* ============================================================
+   FULL-YEAR YEAR PICKER + BID MODE TOGGLE
+   ============================================================ */
+const wYearSel = document.getElementById('w-year');
+function buildYearOptions() {
+  wYearSel.innerHTML = '';
+  const now = new Date();
+  // Show years whose DP 13 hasn't ended yet (relevant for a forward-looking bid).
+  for (let yr = DP_ANCHOR.year - 1; yr <= DP_ANCHOR.year + 4; yr++) {
+    const last = getDPInfo(13, yr);
+    if (last.end < now) continue;
+    const first = getDPInfo(1, yr);
+    const opt = document.createElement('option');
+    opt.value = String(yr);
+    opt.textContent = `${yr} — ${fmtDate(first.start)} through ${fmtDate(last.end)}`;
+    wYearSel.appendChild(opt);
+  }
+  if (wYearSel.options.length > 0) {
+    // Default to the year that contains today, falling back to first available.
+    const todayYear = String(now.getFullYear());
+    const match = Array.from(wYearSel.options).find(o => o.value === todayYear);
+    if (match) match.selected = true;
+  }
+}
+buildYearOptions();
+wYearSel.addEventListener('change', () => {
+  updateWatchRange();
+  rebuildFullYearUI();
+  buildAllSlots();
+});
+
+const bidModeToggle = document.getElementById('bid-mode-toggle');
+const wYearWrap = document.getElementById('w-year-wrap');
+const wStartDPWrap = wStartDP.closest('.field');
+const watchSingleWrap = document.getElementById('watch-single');
+const watchFullYearWrap = document.getElementById('watch-fullyear');
+
+function setBidMode(mode) {
+  bidMode = mode;
+  bidModeToggle.querySelectorAll('.bm-opt').forEach(b => {
+    const isActive = b.dataset.mode === mode;
+    b.classList.toggle('active', isActive);
+    b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+  });
+  if (mode === 'fullYear') {
+    wStartDPWrap.style.display = 'none';
+    wYearWrap.style.display = '';
+    watchSingleWrap.style.display = 'none';
+    watchFullYearWrap.style.display = '';
+    rebuildFullYearUI();
+  } else {
+    wStartDPWrap.style.display = '';
+    wYearWrap.style.display = 'none';
+    watchSingleWrap.style.display = '';
+    watchFullYearWrap.style.display = 'none';
+  }
+  updateWatchRange();
+  buildAllSlots();
+}
+bidModeToggle.querySelectorAll('.bm-opt').forEach(btn => {
+  btn.addEventListener('click', () => setBidMode(btn.dataset.mode));
+});
+
+// Build the 4 per-group watch picker cards (full-year mode).
+const fyWatchGroupsEl = document.getElementById('fy-watch-groups');
+function rebuildFullYearUI() {
+  const yr = +wYearSel.value;
+  const groups = [[1, 3], [4, 6], [7, 9], [10, 13]];
+  fyWatchGroupsEl.innerHTML = '';
+  groups.forEach((range, groupIdx) => {
+    const [first, last] = range;
+    const startInfo = getDPInfo(first, yr);
+    const endInfo = getDPInfo(last, yr);
+    const card = document.createElement('div');
+    card.className = 'fy-watch-group';
+    card.dataset.group = groupIdx;
+    card.innerHTML = `
+      <div class="fy-head">
+        <span class="fy-title">DPs ${first}–${last}</span>
+        <span class="fy-range">${fmtDate(startInfo.start)} – ${fmtDate(endInfo.end)}</span>
+      </div>
+      <div class="watch-options">
+        <div class="watch-opt" data-w="1"><div class="w-num">1</div><div class="w-label">Watch One</div><div class="w-status">— Not Selected —</div></div>
+        <div class="watch-opt" data-w="2"><div class="w-num">2</div><div class="w-label">Watch Two</div><div class="w-status">— Not Selected —</div></div>
+        <div class="watch-opt" data-w="3"><div class="w-num">3</div><div class="w-label">Watch Three</div><div class="w-status">— Not Selected —</div></div>
+      </div>`;
+    // Wire up the watch picker for this group, mirroring the single-mode picker logic.
+    card.querySelectorAll('.watch-opt').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const w = +opt.dataset.w;
+        const st = watchStateGroups[groupIdx];
+        const cur = (st.c1 === w) ? '1' : (st.c2 === w) ? '2' : 'off';
+        if (cur === 'off') {
+          if (st.c1 == null) st.c1 = w; else st.c2 = w;
+        } else if (cur === '1') {
+          // 1st → 2nd: bump prior 2nd off if any, then promote to 2nd
+          if (st.c2 != null) st.c2 = null;
+          st.c1 = null;
+          st.c2 = w;
+        } else {
+          // 2nd → off
+          st.c2 = null;
+        }
+        refreshFullYearWatchCard(groupIdx);
+      });
+    });
+    fyWatchGroupsEl.appendChild(card);
+    refreshFullYearWatchCard(groupIdx);
+  });
+}
+function refreshFullYearWatchCard(groupIdx) {
+  const card = fyWatchGroupsEl.querySelector(`.fy-watch-group[data-group="${groupIdx}"]`);
+  if (!card) return;
+  const st = watchStateGroups[groupIdx];
+  card.querySelectorAll('.watch-opt').forEach(opt => {
+    const w = +opt.dataset.w;
+    opt.classList.remove('c-1', 'c-2');
+    const status = opt.querySelector('.w-status');
+    if (st.c1 === w)      { opt.classList.add('c-1'); status.textContent = '1st Choice'; }
+    else if (st.c2 === w) { opt.classList.add('c-2'); status.textContent = '2nd Choice'; }
+    else                  { status.textContent = '— Not Selected —'; }
+  });
+}
 
 /* ============================================================
    WATCH 1ST / 2ND CHOICE PICKER
@@ -1229,8 +1476,18 @@ updateWatchRange();
    Setting a watch to 1st bumps any other watch currently at 1st to off.
    Same rule for 2nd.
    ============================================================ */
-// State: { c1: <watch# or null>, c2: <watch# or null> }
+// State: { c1: <watch# or null>, c2: <watch# or null> } — used in single-period mode.
 const watchState = { c1: null, c2: null };
+
+// Full-year mode state: 4 sets of {c1, c2}, one per DP group (1-3, 4-6, 7-9, 10-13).
+const watchStateGroups = [
+  { c1: null, c2: null },
+  { c1: null, c2: null },
+  { c1: null, c2: null },
+  { c1: null, c2: null },
+];
+
+// Bid mode is declared earlier in the file (before any helpers that branch on it).
 
 document.querySelectorAll('.watch-opt').forEach(opt => {
   opt.addEventListener('click', () => {
@@ -1314,11 +1571,15 @@ function resetWatch() {
    Each slot: { include, view, days[28] each with state1/state2 }
    ============================================================ */
 
-const rdoSlots = [
-  { view: '1', days: [] },
-  { view: '1', days: [] },
-  { view: '1', days: [] }
-];
+// Dynamic per-DP RDO slots. Length is 3 for normal groups, 4 for the year-end
+// (DPs 10-13) group. ensureRDOSlots resizes the array preserving any existing
+// data when possible.
+const rdoSlots = [];
+function ensureRDOSlots(n) {
+  while (rdoSlots.length < n) rdoSlots.push({ view: '1', days: [] });
+  while (rdoSlots.length > n) rdoSlots.pop();
+}
+ensureRDOSlots(3);
 
 // Holiday helpers (same as before)
 function easterDate(year) {
@@ -1422,6 +1683,9 @@ function buildRDOStartDPOptions() {
 buildRDOStartDPOptions();
 
 function getRDOStartDP() {
+  if (isFullYear()) {
+    return { dp: 1, year: +wYearSel.value };
+  }
   if (rMatchWatch.checked) {
     const [dp, yr] = wStartDP.value.split('-').map(Number);
     return { dp, year: yr };
@@ -1429,6 +1693,16 @@ function getRDOStartDP() {
     const [dp, yr] = rStartDP.value.split('-').map(Number);
     return { dp, year: yr };
   }
+}
+
+// How many DPs are in the currently-selected bid group? In full-year mode this is
+// always 13. Otherwise it's the size of the year-quarter group (3, except 4 for
+// the year-end DPs 10-13).
+function numDPsInGroup() {
+  if (isFullYear()) return 13;
+  const { dp } = getRDOStartDP();
+  const [first, last] = dpGroupForYearAndStartDP(dp);
+  return last - first + 1;
 }
 
 function getRDOSlotDP(slot) {
@@ -1462,7 +1736,9 @@ const rdoSlotsEl = document.getElementById('rdo-slots');
 
 function buildAllSlots() {
   rdoSlotsEl.innerHTML = '';
-  for (let s = 0; s < 3; s++) {
+  const n = numDPsInGroup();
+  ensureRDOSlots(n);
+  for (let s = 0; s < n; s++) {
     rdoSlotsEl.appendChild(buildSlotPanel(s));
   }
 }
@@ -1490,6 +1766,7 @@ function buildSlotPanel(slotIdx) {
     <div class="rdo-slot-head">
       <span class="slot-label">DP ${info.dp}</span>
       <span class="slot-dp"><span>${info.year}</span> &nbsp; ${fmtDate(info.start)} – ${fmtDate(info.end)}</span>
+      <button type="button" class="apply-all-btn" data-slot="${slotIdx}" title="Copy this DP's selections to all other DPs">Apply to all DPs</button>
     </div>
     <div class="rdo-slot-body">
       <div class="rdo-info">
@@ -1619,6 +1896,42 @@ function buildSlotPanel(slotIdx) {
     wireHalf(cell.querySelector('.day-half-bot'), 'bot');
     calendar.appendChild(cell);
   });
+
+  // Wire up the "Apply to all DPs" button: copies this slot's selections to all
+  // other slots, respecting the slot's current view (1st choice / 2nd choice / both).
+  const applyAllBtn = slotEl.querySelector('.apply-all-btn');
+  if (applyAllBtn) {
+    applyAllBtn.addEventListener('click', () => {
+      const sourceSlot = rdoSlots[slotIdx];
+      const view = sourceSlot.view; // '1', '2', or 'both'
+      // Snapshot the source's day-by-day states so the copy stays consistent if
+      // the user has the calendar mid-paint.
+      const sourceStates = sourceSlot.days.map(d => ({ state1: d.state1, state2: d.state2 }));
+      let copiedCount = 0;
+      for (let i = 0; i < rdoSlots.length; i++) {
+        if (i === slotIdx) continue;
+        const target = rdoSlots[i];
+        for (let j = 0; j < target.days.length && j < sourceStates.length; j++) {
+          if (view === '1') {
+            target.days[j].state1 = sourceStates[j].state1;
+          } else if (view === '2') {
+            target.days[j].state2 = sourceStates[j].state2;
+          } else { // 'both'
+            target.days[j].state1 = sourceStates[j].state1;
+            target.days[j].state2 = sourceStates[j].state2;
+          }
+        }
+        copiedCount++;
+      }
+      // Refresh all slot UIs to reflect the new state.
+      rdoSlots.forEach((_, i) => {
+        rdoSlots[i].days.forEach((_, j) => refreshDayCell(i, j));
+        updateStats(i);
+      });
+      const label = view === '1' ? '1st choice' : view === '2' ? '2nd choice' : 'both choices';
+      toast(`Applied DP ${getRDOSlotDP(slotIdx).dp} ${label} to ${copiedCount} other DP${copiedCount === 1 ? '' : 's'}`);
+    });
+  }
 
   // Apply view class & paint after a microtask so the element exists in DOM
   setTimeout(() => {
@@ -1964,6 +2277,9 @@ const PG_H = 792;
 const PAGE_MARGIN = 18;
 const BORDER_GRAY = 90;     // line color for table borders
 const FAINT_FILL = 220;     // weekend column shading on PDF — slightly darker for visibility
+const WATERMARK_GRAY = 211; // text watermark color (WATCH BID letters, holiday codes) —
+                            // slightly darker than FAINT_FILL so the letters read while
+                            // still feeling like a faint background mark.
 
 
 // ----------------- COMBINED APD-086 PDF -----------------
@@ -1986,10 +2302,12 @@ function generateCombinedPDF() {
   if (!serial) return toast('Serial number required', true);
   if (!/^\d{5}$/.test(serial)) return toast('Serial must be exactly 5 digits', true);
 
+  const numDPs = numDPsInGroup();
+
   // Validate selections.
   // 1st choice is required when a DP has any selections — must be exactly 12 RDOs.
   // 2nd choice is OPTIONAL — only validate if the user entered any 2nd-choice marks.
-  for (let s = 0; s < 3; s++) {
+  for (let s = 0; s < numDPs; s++) {
     const slot = rdoSlots[s];
     const has1 = slot.days.some(d => d.state1 !== 'work');
     const has2 = slot.days.some(d => d.state2 !== 'work');
@@ -2004,26 +2322,44 @@ function generateCombinedPDF() {
     }
   }
 
-  // Determine the 3 DPs from the watch start
-  const [dpStart, yrStart] = wStartDP.value.split('-').map(Number);
+  // Determine the DPs in the selected group (single mode) or full year (fullYear mode).
+  let dpStart, yrStart;
+  if (isFullYear()) {
+    dpStart = 1;
+    yrStart = +wYearSel.value;
+  } else {
+    [dpStart, yrStart] = wStartDP.value.split('-').map(Number);
+  }
   const dps = [];
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < numDPs; i++) {
     let curDP = dpStart + i;
     let curYr = yrStart;
     if (curDP > 13) { curDP -= 13; curYr += 1; }
     dps.push(getDPInfo(curDP, curYr));
   }
 
-  const watch1 = watchState.c1 != null ? `Watch ${watchState.c1}` : '';
-  const watch2 = watchState.c2 != null ? `Watch ${watchState.c2}` : '';
-  const hasWatchBid = watch1 !== '' || watch2 !== '';
+  // Watch choices: in single mode, one pair {c1, c2}. In fullYear mode, four pairs
+  // (one per group: 1-3, 4-6, 7-9, 10-13). For email subject and "hasWatchBid" we
+  // collapse fullYear to a "did the officer set ANY watch picks?" question.
+  let watch1, watch2, hasWatchBid;
+  if (isFullYear()) {
+    hasWatchBid = watchStateGroups.some(g => g.c1 != null || g.c2 != null);
+    // Composite labels reflecting all four group picks (used only as a fallback;
+    // the per-slip rendering in full-year mode draws each group's choices directly).
+    watch1 = watchStateGroups.map(g => g.c1 != null ? `W${g.c1}` : '—').join('/');
+    watch2 = watchStateGroups.map(g => g.c2 != null ? `W${g.c2}` : '—').join('/');
+  } else {
+    watch1 = watchState.c1 != null ? `Watch ${watchState.c1}` : '';
+    watch2 = watchState.c2 != null ? `Watch ${watchState.c2}` : '';
+    hasWatchBid = watch1 !== '' || watch2 !== '';
+  }
   const symFor = (s) => statePdfSym(s);
 
   // Determine which forms to render.
   //  - Watch BID slip prints only if at least one watch choice (1st or 2nd) is set.
-  //  - DPs 1..3 are included only if they have any RDO/VC selections.
+  //  - DPs are included only if they have any RDO/VC selections.
   const includedDPs = []; // array of slot indices
-  for (let s = 0; s < 3; s++) {
+  for (let s = 0; s < numDPs; s++) {
     const slot = rdoSlots[s];
     if (slot.days.some(d => d.state1 !== 'work' || d.state2 !== 'work')) {
       includedDPs.push(s);
@@ -2039,8 +2375,10 @@ function generateCombinedPDF() {
 
   // Per-slip heights — sized just tall enough for content + legend without leaving
   // empty space below.
-  const FORM_H_WATCH = 176;
-  const FORM_H_RDO = 188;
+  // Per-slip heights. Watch BID is 4 cell rows for both 3-DP and 4-DP groups (the
+  // 4-DP case merges the 4th DP's dates into the label row). RDO slips are 5 rows.
+  const FORM_H_WATCH = 173;
+  const FORM_H_RDO = 186;
 
   // Helper: pad mark rows to a target count. Original APD-086:
   //   Watch BID slip = 3 date rows + 1 mark row (the W·A·T·C·H_B·I·D label) = 4 cell rows
@@ -2052,96 +2390,176 @@ function generateCombinedPDF() {
   };
 
   // Mark row spells out "WATCH BID" with one letter per cell, exactly as on the sample form.
-  // Letters at cell indices: 8=W, 9=A, 10=T, 11=C, 12=H, gap at 13, 14=B, 15=I, 16=D
+  // Letters at cell indices: 8=W, 9=A, 10=T, 11=C, 12=H, gap at 13-14, 15=B, 16=I, 17=D
+  // (BID shifted right by 1 cell so the 'B' falls on Monday, not the shaded Sunday column).
   const watchBidLabelRow = new Array(28).fill('');
   ['W','A','T','C','H'].forEach((ch, i) => watchBidLabelRow[8 + i] = ch);
-  ['B','I','D'].forEach((ch, i) => watchBidLabelRow[14 + i] = ch);
+  ['B','I','D'].forEach((ch, i) => watchBidLabelRow[15 + i] = ch);
 
-  // Build the slip list dynamically with cumulative Y positions.
-  // Empty-bid mode: force-print all four slips (Watch BID + DP1 + DP2 + DP3) blank
-  // so the officer can hand-fill them. In non-empty mode, omit the slips that have
-  // no data per the existing rules.
-  const slips = []; // { y, h }
-  let cy = PAGE_MARGIN + 4;
+  // Build the slip list with page-break support. Each slip records its y, h, and
+  // page so the cut-here lines and per-page holiday legend can be placed correctly.
+  // Page break: if the next slip would extend below the page bottom, we addPage()
+  // and reset cy to the top margin.
+  const slips = []; // { y, h, page }
+  const pageTopY = PAGE_MARGIN + 4;
+  // Reserve bottom space for the holiday legend. Legend baseline 5pt below last
+  // slip + ~3pt text below baseline = 8pt minimum. Allows 4-DP groups to pack
+  // Watch + 3 RDO on page 1 with the 1.5pt internal-clearance preserved.
+  const reservedBottom = 8;
+  let cy = pageTopY;
+  let pageIdx = 0;
 
-  // Watch BID slip prints if the user picked a watch choice OR if nothing was picked
-  // anywhere (empty-bid hand-fill mode).
-  if (hasWatchBid || isEmptyBid) {
-    const slipY = cy;
-    drawAPD086(doc, slipY, FORM_H_WATCH, {
+  const addSlip = (h, drawFn, forceNewPage) => {
+    if (forceNewPage && slips.length > 0) {
+      doc.addPage();
+      pageIdx += 1;
+      cy = pageTopY;
+    } else if (cy + h > PG_H - reservedBottom) {
+      doc.addPage();
+      pageIdx += 1;
+      cy = pageTopY;
+    }
+    drawFn(cy);
+    slips.push({ y: cy, h, page: pageIdx });
+    cy += h;
+  };
+
+  // Helper: build a Watch BID slip for a specific group of DPs. Used both for the
+  // single-period Watch BID slip and for each of the 4 mini-slips on a full-year
+  // Watch BID page.
+  const drawWatchBidSlip = (slipY, slipH, groupDPs, choice1, choice2) => {
+    const allDateRows = groupDPs.map(info => {
+      const arr = [];
+      for (let i = 0; i < 28; i++) {
+        const d = new Date(info.start);
+        d.setDate(d.getDate() + i);
+        arr.push(d);
+      }
+      return arr;
+    });
+    // Layout differs by group size:
+    //  • 3-DP groups: 3 date rows + 1 dedicated label row (4 total rows). Label
+    //    row letters render in light gray.
+    //  • 4-DP groups: 3 date rows + 1 hybrid row (DP4 dates merged with the
+    //    WATCH BID label letters). Total still 4 rows.
+    let dateRows, dateRowLabels, markRows, shadedMarkRowIdxs;
+    if (groupDPs.length === 4) {
+      dateRows = allDateRows;
+      dateRowLabels = [null, null, null, watchBidLabelRow];
+      markRows = padMarks([], 0);
+      shadedMarkRowIdxs = null;
+    } else {
+      dateRows = allDateRows;
+      dateRowLabels = null;
+      markRows = padMarks([ watchBidLabelRow ], 1);
+      shadedMarkRowIdxs = [0];
+    }
+    drawAPD086(doc, slipY, slipH, {
       name: nameWithRank, serial, curWatch,
       dpHeader: 'DP#s',
-      dpRange: `${dps[0].dp} - ${dps[2].dp}`,
-      startDate: fmtMDDYYYY(dps[0].start),
-      endDate: fmtMDDYYYY(dps[2].end),
-      firstChoice: watch1,
-      secondChoice: watch2,
-      dateRows: dps.map(info => {
-        const arr = [];
-        for (let i = 0; i < 28; i++) {
-          const d = new Date(info.start);
-          d.setDate(d.getDate() + i);
-          arr.push(d);
-        }
-        return arr;
-      }),
-      // Show the per-slip legend on the Watch BID slip too — for consistency.
+      dpRange: `${groupDPs[0].dp} - ${groupDPs[groupDPs.length - 1].dp}`,
+      startDate: fmtMDDYYYY(groupDPs[0].start),
+      endDate: fmtMDDYYYY(groupDPs[groupDPs.length - 1].end),
+      firstChoice: choice1,
+      secondChoice: choice2,
+      dateRows,
+      dateRowLabels,
       showLegend: true,
-      markRows: padMarks([ watchBidLabelRow ], 1)
+      markRows,
+      shadedMarkRowIdxs
     });
-    slips.push({ y: slipY, h: FORM_H_WATCH });
-    cy += FORM_H_WATCH;
+  };
+
+  if (isFullYear()) {
+    // FULL-YEAR MODE: page 1 has 4 Watch BID mini-slips (one per DP group).
+    // RDO pages: each DP gets its own page.
+    if (hasWatchBid || isEmptyBid) {
+      // Group DPs into the four year-quarter groups: 1-3, 4-6, 7-9, 10-13.
+      const groupRanges = [[1, 3], [4, 6], [7, 9], [10, 13]];
+      groupRanges.forEach((range, groupIdx) => {
+        const [first, last] = range;
+        const groupDPs = dps.filter(info => info.dp >= first && info.dp <= last);
+        const gState = watchStateGroups[groupIdx];
+        const c1 = gState.c1 != null ? `Watch ${gState.c1}` : '';
+        const c2 = gState.c2 != null ? `Watch ${gState.c2}` : '';
+        addSlip(FORM_H_WATCH, (slipY) => {
+          drawWatchBidSlip(slipY, FORM_H_WATCH, groupDPs, c1, c2);
+        });
+      });
+    }
+  } else {
+    // SINGLE-PERIOD MODE: one Watch BID slip covering all DPs in the chosen group.
+    if (hasWatchBid || isEmptyBid) {
+      addSlip(FORM_H_WATCH, (slipY) => {
+        drawWatchBidSlip(slipY, FORM_H_WATCH, dps, watch1, watch2);
+      });
+    }
   }
 
-  // RDO slips: included DPs, OR all three DPs in empty-bid hand-fill mode.
+  // RDO slips: included DPs, OR all DPs in empty-bid hand-fill mode.
   // RDO forms: 1st/2nd CHOICE boxes left blank — they are only used on the Watch BID.
-  const dpIndicesToPrint = isEmptyBid ? [0, 1, 2] : includedDPs;
-  dpIndicesToPrint.forEach((slotIdx) => {
+  // In full-year mode, force a page break before each RDO slip (one DP per page).
+  const dpIndicesToPrint = isEmptyBid
+    ? Array.from({ length: numDPs }, (_, i) => i)
+    : includedDPs;
+  dpIndicesToPrint.forEach((slotIdx, idxInList) => {
     const slot = rdoSlots[slotIdx];
     const info = dps[slotIdx];
-    const slipY = cy;
-
-    drawAPD086(doc, slipY, FORM_H_RDO, {
-      name: nameWithRank, serial, curWatch,
-      dpHeader: 'DP#',
-      dpRange: String(info.dp),
-      startDate: fmtMDDYYYY(info.start),
-      endDate: fmtMDDYYYY(info.end),
-      firstChoice: '',
-      secondChoice: '',
-      dateRows: [ slot.days.map(d => d.date) ],
-      // Per-slip mini legend at the bottom — RDO slips only (Watch BID slip omits it).
-      showLegend: true,
-      markRows: (() => {
-        const rows = [ slot.days.map(d => symFor(d.state1)) ];
-        const has2 = slot.days.some(d => d.state2 !== 'work');
-        if (has2) rows.push(slot.days.map(d => symFor(d.state2)));
-        const padded = padMarks(rows, 4);
-        // Holiday markers — applied to EVERY RDO slip (real bids and BLANK alike).
-        // Row 3 gets a 2-letter code for any holiday in that column. Row 4 gets a "$"
-        // under each paid (MOU 30/39) holiday. State1/state2 marks live on rows 1-2,
-        // so holidays never collide with the officer's selections.
-        padded[2] = slot.days.map(d => holidayCodeFor(d.date));
-        padded[3] = slot.days.map(d => {
-          const h = holidayFor(d.date);
-          return h && h.paid ? '$' : '';
-        });
-        return padded;
-      })()
-    });
-    slips.push({ y: slipY, h: FORM_H_RDO });
-    cy += FORM_H_RDO;
+    // In full-year mode, every RDO slip starts a new page (one DP per page).
+    // The very first RDO slip also forces a page break unless there's no Watch BID
+    // slip preceding it (in that case the natural top-of-document position is fine).
+    const forceNewPage = isFullYear() && (slips.length > 0);
+    addSlip(FORM_H_RDO, (slipY) => {
+      drawAPD086(doc, slipY, FORM_H_RDO, {
+        name: nameWithRank, serial, curWatch,
+        dpHeader: 'DP#',
+        dpRange: String(info.dp),
+        startDate: fmtMDDYYYY(info.start),
+        endDate: fmtMDDYYYY(info.end),
+        firstChoice: '',
+        secondChoice: '',
+        dateRows: [ slot.days.map(d => d.date) ],
+        // Per-slip mini legend at the bottom — RDO slips only (Watch BID slip omits it).
+        showLegend: true,
+        // Rows 2 & 3 (0-indexed) carry holiday markers — drawn in gray, not black.
+        holidayRowIdxs: [2, 3],
+        // Stash the slot index so we can correlate slips back to DPs for the
+        // per-page holiday legend below.
+        _slotIdx: slotIdx,
+        markRows: (() => {
+          const rows = [ slot.days.map(d => symFor(d.state1)) ];
+          const has2 = slot.days.some(d => d.state2 !== 'work');
+          if (has2) rows.push(slot.days.map(d => symFor(d.state2)));
+          const padded = padMarks(rows, 4);
+          // Holiday markers — applied to EVERY RDO slip (real bids and BLANK alike).
+          // Row 3 gets a 2-letter code for any holiday in that column. Row 4 gets a "$"
+          // under each paid (MOU 30/39) holiday. State1/state2 marks live on rows 1-2,
+          // so holidays never collide with the officer's selections.
+          padded[2] = slot.days.map(d => holidayCodeFor(d.date));
+          padded[3] = slot.days.map(d => {
+            const h = holidayFor(d.date);
+            return h && h.paid ? '$' : '';
+          });
+          return padded;
+        })()
+      });
+    }, forceNewPage);
+    // Tag the just-added slip with which DP slot it represents.
+    slips[slips.length - 1].slotIdx = slotIdx;
   });
 
-  // Dashed "cut here" line at each slip boundary (between slip i and i+1).
+  // Dashed "cut here" line at each slip boundary (between adjacent slips on the
+  // SAME page only — never across page breaks, since the bottom of a page already
+  // serves as a natural boundary).
   for (let i = 0; i < slips.length - 1; i++) {
+    if (slips[i].page !== slips[i + 1].page) continue;
+    doc.setPage(slips[i].page + 1); // jsPDF pages are 1-indexed
     const lineY = slips[i].y + slips[i].h;
     doc.setLineDashPattern([3, 3], 0);
     doc.setDrawColor(140, 140, 140);
     doc.setLineWidth(0.5);
     doc.line(PAGE_MARGIN + 6, lineY, PG_W - PAGE_MARGIN - 6, lineY);
     doc.setLineDashPattern([], 0);
-    // small "✂ cut here" label centered on the line
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
     doc.setTextColor(140, 140, 140);
@@ -2152,58 +2570,57 @@ function generateCombinedPDF() {
     doc.text(labelText, PG_W / 2, lineY + 2, { align: 'center' });
   }
 
-  // Holiday legend — placed directly below the last slip with the same spacing as
-  // the cut-here lines that sit between slips. Only included when holidays actually
-  // appear in the printed slips (now that holiday markers ride on every RDO slip).
-  if (slips.length > 0) {
-    const lastSlip = slips[slips.length - 1];
-    // Holiday legend baseline ~5pt below the last slip's bottom border.
+  // Per-page holiday legend — placed below the last slip on each page, listing only
+  // the holidays whose dates appear in slips on that same page.
+  const compactHolidayNames = {
+    "New Year's Day":   "New Year Day",
+    "MLK Jr. Day":      "MLK Day",
+    "Presidents' Day":  "Presidents' Day",
+    "Easter Sunday":    "Easter",
+    "Memorial Day":     "Memorial Day",
+    "Juneteenth":       "Juneteenth",
+    "Independence Day": "Independence Day",
+    "Labor Day":        "Labor Day",
+    "Columbus Day":     "Columbus Day",
+    "Veteran's Day":    "Veterans Day",
+    "Thanksgiving Day": "Thanksgiving Day",
+    "Christmas Eve":    "Christmas Eve",
+    "Christmas Day":    "Christmas Day",
+    "New Year's Eve":   "NYE",
+  };
+  // Group slips by page index, then for each page collect holidays in the printed
+  // RDO slips on that page (Watch BID slip dates aren't counted since that slip
+  // doesn't render holiday markers in its mark row).
+  const slipsByPage = {};
+  slips.forEach(s => {
+    (slipsByPage[s.page] = slipsByPage[s.page] || []).push(s);
+  });
+  Object.keys(slipsByPage).forEach(pageStr => {
+    const page = Number(pageStr);
+    const pageSlips = slipsByPage[page];
+    const lastSlip = pageSlips[pageSlips.length - 1];
     const legendY = lastSlip.y + lastSlip.h + 5;
-
-    // Collect which holidays are actually printed. Only RDO slips actually printed
-    // count for this; Watch BID dates aren't included because that slip doesn't
-    // render the row 3/4 holiday markers.
     const seen = new Set();
     let anyPaid = false;
-    dpIndicesToPrint.forEach(slotIdx => {
-      const slot = rdoSlots[slotIdx];
-      slot.days.forEach(d => {
+    pageSlips.forEach(s => {
+      if (s.slotIdx === undefined) return;       // Watch BID slip (no slotIdx)
+      rdoSlots[s.slotIdx].days.forEach(d => {
         const h = holidayFor(d.date);
-        if (h) {
-          seen.add(h.name);
-          if (h.paid) anyPaid = true;
-        }
+        if (h) { seen.add(h.name); if (h.paid) anyPaid = true; }
       });
     });
-
     const presentEntries = HOLIDAY_CODES.filter(([name]) => seen.has(name));
     if (presentEntries.length > 0 || anyPaid) {
-      const compactNames = {
-        "New Year's Day":   "New Year Day",
-        "MLK Jr. Day":      "MLK Day",
-        "Presidents' Day":  "Presidents' Day",
-        "Easter Sunday":    "Easter",
-        "Memorial Day":     "Memorial Day",
-        "Juneteenth":       "Juneteenth",
-        "Independence Day": "Independence Day",
-        "Labor Day":        "Labor Day",
-        "Columbus Day":     "Columbus Day",
-        "Veteran's Day":    "Veterans Day",
-        "Thanksgiving Day": "Thanksgiving Day",
-        "Christmas Eve":    "Christmas Eve",
-        "Christmas Day":    "Christmas Day",
-        "New Year's Eve":   "NYE",
-      };
       const parts = [];
       if (anyPaid) parts.push('$ - Paid MOU Holiday');
-      presentEntries.forEach(([n, c]) => parts.push(`${c}-${compactNames[n] || n}`));
-
+      presentEntries.forEach(([n, c]) => parts.push(`${c}-${compactHolidayNames[n] || n}`));
+      doc.setPage(page + 1); // jsPDF pages are 1-indexed
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(6.5);
       doc.setTextColor(80, 80, 80);
       doc.text(parts.join(' · '), PG_W / 2, legendY, { align: 'center' });
     }
-  }
+  });
 
   // ---- Filename + email-subject helpers ----
   const lastName = (name || '').split(',')[0].trim() || 'unsigned';
@@ -2245,8 +2662,13 @@ function generateCombinedPDF() {
   // as a Watch bid, with "BLANK Bids" instead. Skip email/share entirely.
   //   "99395, Sgt Dear, BLANK Bids for DPs 7, 8, 9-2026.pdf"
   if (isEmptyBid) {
-    const allThreeEarly = dps.map(d => ({ dp: d.dp, year: d.year }));
-    const earlyFilename = `${namePart}, BLANK Bids for ${dpPrefix(allThreeEarly)} ${formatDPGroups(allThreeEarly)}.pdf`;
+    let earlyFilename;
+    if (isFullYear()) {
+      earlyFilename = `${namePart}, BLANK Full Year Bid - ${yrStart}.pdf`;
+    } else {
+      const allThreeEarly = dps.map(d => ({ dp: d.dp, year: d.year }));
+      earlyFilename = `${namePart}, BLANK Bids for ${dpPrefix(allThreeEarly)} ${formatDPGroups(allThreeEarly)}.pdf`;
+    }
     doc.save(earlyFilename);
     toast('PDF generated (no bid data)');
     return;
@@ -2268,8 +2690,11 @@ function generateCombinedPDF() {
   //   RDO 1 DP:     "99395, Sgt Dear, RDO Bid for DP 7-2026.pdf"
   //   RDO 2 DPs:    "99395, Sgt Dear, RDO Bid for DPs 7, 8-2026.pdf"
   //   Year cross:   "99395, Sgt Dear, Watch Bid for DPs 13-2026, 1, 2-2027.pdf"
+  //   Full year:    "99395, Sgt Dear, Full Year Watch & RDO Bid - 2027.pdf"
   let bidPart;
-  if (hasAnyRDO) {
+  if (isFullYear()) {
+    bidPart = hasAnyRDO ? `Full Year Watch & RDO Bid - ${yrStart}` : `Full Year Watch Bid - ${yrStart}`;
+  } else if (hasAnyRDO) {
     bidPart = `RDO Bid for ${dpPrefix(rdoDPs)} ${formatDPGroups(rdoDPs)}`;
   } else {
     const allThree = dps.map(d => ({ dp: d.dp, year: d.year }));
@@ -2299,7 +2724,7 @@ function generateCombinedPDF() {
   );
   if (anyDPHasManyVC) recipients.push('pssannualvacation@lawa.org');
 
-  const body = `Submitting my Watch / Days-Off Bid for the period DP ${dps[0].dp}–${dps[2].dp} (${fmtMDDYYYY(dps[0].start)} – ${fmtMDDYYYY(dps[2].end)}).\n\nForm attached.`;
+  const body = `Submitting my Watch / Days-Off Bid for the period DP ${dps[0].dp}–${dps[dps.length - 1].dp} (${fmtMDDYYYY(dps[0].start)} – ${fmtMDDYYYY(dps[dps.length - 1].end)}).\n\nForm attached.`;
 
   shareOrFallbackPDF(doc, filename, recipients, subject, body);
 }
@@ -2419,29 +2844,38 @@ function drawAPD086(doc, y, h, data) {
 
   const cellW = w / 28;
 
-  // Date rows
-  data.dateRows.forEach(dateRow => {
-    drawDateRow(doc, x, cy, w, dateRowH, cellW, dateRow);
+  // Date rows. data.dateRowLabels (parallel to dateRows) optionally carries a
+  // 28-letter label array per row; the row will overlay shaded cells with bold
+  // letters (used to merge the WATCH BID label into the 4th DP date row).
+  data.dateRows.forEach((dateRow, idx) => {
+    const labels = data.dateRowLabels ? data.dateRowLabels[idx] : null;
+    drawDateRow(doc, x, cy, w, dateRowH, cellW, dateRow, labels);
     cy += dateRowH;
   });
 
-  // Mark rows (each row of strings becomes its own row of marks)
-  data.markRows.forEach(markRow => {
-    drawMarkRow(doc, x, cy, w, markRowH, cellW, markRow);
+  // Mark rows (each row of strings becomes its own row of marks). data.holidayRowIdxs
+  // (array of 0-based indices) marks which rows should render in muted gray to match
+  // the weekend-shading aesthetic — used for the holiday code row and "$" row on
+  // RDO slips so they don't compete visually with the officer's selections.
+  // data.shadedMarkRowIdxs (set of 0-based indices) marks which rows render with
+  // shaded fill behind their letters — used for the WATCH BID label row on 3-DP slips.
+  const holidayIdxs = new Set(data.holidayRowIdxs || []);
+  const shadedIdxs = new Set(data.shadedMarkRowIdxs || []);
+  data.markRows.forEach((markRow, idx) => {
+    // Holiday-marker rows render in light gray (FAINT_FILL = 220), same shade as
+    // the WATCH BID label letters — they read as a watermark behind the officer's
+    // actual selections.
+    const color = holidayIdxs.has(idx) ? [WATERMARK_GRAY, WATERMARK_GRAY, WATERMARK_GRAY] : null;
+    drawMarkRow(doc, x, cy, w, markRowH, cellW, markRow, color, shadedIdxs.has(idx));
     cy += markRowH;
   });
 
   // Optional per-slip mini legend, placed just above the inner bottom border.
   if (data.showLegend) {
-    // Vertically center the form-number stamp and the symbol legend in the gap
-    // between the last mark row (cy) and the inner bottom border (contentBottomY).
-    // The +2 nudge accounts for text's optical center sitting slightly below the
-    // baseline midpoint (cap-height geometry).
-    // Vertically center the form-number stamp and the symbol legend in the gap
-    // between the last mark row (cy) and the inner bottom border (contentBottomY).
-    // Optical center: baseline sits about 0.5×(cap-height) below the gap midpoint
-    // so the visible glyphs are evenly framed top-to-bottom.
-    const legendY = (cy + contentBottomY) / 2 + 1;
+    // Legend baseline: 3pt below the gap midpoint — shifts the APD FORM stamp and
+    // legend slightly DOWN from optical center so they sit closer to (but cleanly
+    // above) the inner border.
+    const legendY = (cy + contentBottomY) / 2 + 3;
     // "APD FORM 086" stamp — bold, bottom-left of the slip's content area.
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(5.4);
@@ -2519,7 +2953,7 @@ function drawDOWHeader(doc, x, y, w, rowH) {
   }
 }
 
-function drawDateRow(doc, x, y, w, rowH, cellW, dateRow) {
+function drawDateRow(doc, x, y, w, rowH, cellW, dateRow, labelLetters) {
   // Shade weekend columns (Sundays at i%7==0, Saturdays at i%7==6) before drawing borders.
   doc.setFillColor(FAINT_FILL, FAINT_FILL, FAINT_FILL);
   for (let i = 0; i < 28; i++) {
@@ -2531,20 +2965,35 @@ function drawDateRow(doc, x, y, w, rowH, cellW, dateRow) {
   doc.setDrawColor(BORDER_GRAY, BORDER_GRAY, BORDER_GRAY);
   doc.setLineWidth(0.4);
   doc.rect(x, y, w, rowH);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6);
-  doc.setTextColor(0, 0, 0);
   for (let i = 0; i < 28; i++) {
     const cx = x + cellW * i;
     if (i > 0) doc.line(cx, y, cx, y + rowH);
     const d = dateRow[i];
+    const hasLabel = labelLetters && labelLetters[i];
+
+    // Pass 1: bold label letter rendered LARGE in light gray (matching the form's
+    // header shading), centered in the cell. Cell itself stays white — the gray
+    // is in the letter glyphs themselves.
+    if (hasLabel) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(WATERMARK_GRAY, WATERMARK_GRAY, WATERMARK_GRAY);
+      doc.text(labelLetters[i], cx + cellW / 2, y + 9.5, { align: 'center' });
+    }
+
+    // Pass 2: date M/D drawn ON TOP of the gray letter. The gray letter is light
+    // enough that the black date reads cleanly without an outline.
     if (d) {
-      doc.text(`${d.getMonth()+1}/${d.getDate()}`, cx + cellW / 2, y + 8.5, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6);
+      doc.setTextColor(0, 0, 0);
+      doc.text(`${d.getMonth()+1}/${d.getDate()}`,
+               cx + cellW / 2, y + 8.5, { align: 'center' });
     }
   }
 }
 
-function drawMarkRow(doc, x, y, w, rowH, cellW, markRow) {
+function drawMarkRow(doc, x, y, w, rowH, cellW, markRow, textColor, shadeMarks) {
   // Shade weekend columns first (matches the date row).
   doc.setFillColor(FAINT_FILL, FAINT_FILL, FAINT_FILL);
   for (let i = 0; i < 28; i++) {
@@ -2556,6 +3005,11 @@ function drawMarkRow(doc, x, y, w, rowH, cellW, markRow) {
   doc.setDrawColor(BORDER_GRAY, BORDER_GRAY, BORDER_GRAY);
   doc.setLineWidth(0.4);
   doc.rect(x, y, w, rowH);
+  // shadeMarks renders the letters themselves in light gray (matching the form's
+  // header shading) instead of black — used for the WATCH BID label row so it reads
+  // as a visual hint rather than a bold mark. Cell fill stays white.
+  let [r, g, b] = textColor || [0, 0, 0];
+  if (shadeMarks) [r, g, b] = [WATERMARK_GRAY, WATERMARK_GRAY, WATERMARK_GRAY];
   for (let i = 0; i < 28; i++) {
     const cx = x + cellW * i;
     if (i > 0) doc.line(cx, y, cx, y + rowH);
@@ -2563,7 +3017,7 @@ function drawMarkRow(doc, x, y, w, rowH, cellW, markRow) {
     if (m) {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
-      doc.setTextColor(0, 0, 0);
+      doc.setTextColor(r, g, b);
       doc.text(m, cx + cellW / 2, y + 9.5, { align: 'center' });
     }
   }
