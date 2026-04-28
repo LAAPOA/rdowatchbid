@@ -1963,48 +1963,8 @@ const PG_W = 612;
 const PG_H = 792;
 const PAGE_MARGIN = 18;
 const BORDER_GRAY = 90;     // line color for table borders
-const FAINT_FILL = 235;     // light gray header fill
+const FAINT_FILL = 220;     // weekend column shading on PDF — slightly darker for visibility
 
-
-function pdfDrawFooter(doc, y, includeHolidayLegend) {
-  // Optional holiday-code legend, rendered above the standard symbol legend.
-  // Only used on the BLANK PDF.
-  if (includeHolidayLegend) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6);
-    doc.setTextColor(80, 80, 80);
-    // Compact names so all 14 fit on one centered line within page width.
-    const compactNames = {
-      "New Year's Day":   "New Year",
-      "MLK Jr. Day":      "MLK",
-      "Presidents' Day":  "Presidents'",
-      "Easter Sunday":    "Easter",
-      "Memorial Day":     "Memorial",
-      "Juneteenth":       "Juneteenth",
-      "Independence Day": "Independence",
-      "Labor Day":        "Labor",
-      "Columbus Day":     "Columbus",
-      "Veteran's Day":    "Veterans",
-      "Thanksgiving Day": "Thanksgiving",
-      "Christmas Eve":    "Xmas Eve",
-      "Christmas Day":    "Christmas",
-      "New Year's Eve":   "NYE",
-    };
-    const legendText = HOLIDAY_CODES
-      .map(([n, c]) => `${c}-${compactNames[n] || n}`)
-      .join(' · ');
-    doc.text(legendText, PG_W / 2, y, { align: 'center' });
-  }
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(0, 0, 0);
-  doc.text('APD FORM 086', PAGE_MARGIN, y + 12);
-  doc.setFontSize(7.5);
-  doc.text(
-    'Symbols: O-Regular; H - Holiday; V - Vacation; T - Training; M/L - Military Leave; JD - Jury Duty; FL - Family Leave; SK - Sick',
-    PG_W / 2, y + 12, { align: 'center' }
-  );
-}
 
 // ----------------- COMBINED APD-086 PDF -----------------
 // One portrait page with 4 stacked APD-086 forms:
@@ -2077,10 +2037,10 @@ function generateCombinedPDF() {
 
   const doc = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'portrait' });
 
-  // Per-slip heights. Watch BID is shorter (3 date rows + 1 label row = 4 cell rows);
-  // RDO slips are taller (1 date row + 4 mark rows = 5 cell rows).
-  const FORM_H_WATCH = 170;
-  const FORM_H_RDO = 185;
+  // Per-slip heights — sized just tall enough for content + legend without leaving
+  // empty space below.
+  const FORM_H_WATCH = 176;
+  const FORM_H_RDO = 188;
 
   // Helper: pad mark rows to a target count. Original APD-086:
   //   Watch BID slip = 3 date rows + 1 mark row (the W·A·T·C·H_B·I·D label) = 4 cell rows
@@ -2125,6 +2085,8 @@ function generateCombinedPDF() {
         }
         return arr;
       }),
+      // Show the per-slip legend on the Watch BID slip too — for consistency.
+      showLegend: true,
       markRows: padMarks([ watchBidLabelRow ], 1)
     });
     slips.push({ y: slipY, h: FORM_H_WATCH });
@@ -2155,11 +2117,15 @@ function generateCombinedPDF() {
         const has2 = slot.days.some(d => d.state2 !== 'work');
         if (has2) rows.push(slot.days.map(d => symFor(d.state2)));
         const padded = padMarks(rows, 4);
-        // BLANK mode: stuff the 3rd mark row (index 2) with 2-letter holiday codes
-        // for any cell whose date falls on a paid or federal holiday.
-        if (isEmptyBid) {
-          padded[2] = slot.days.map(d => holidayCodeFor(d.date));
-        }
+        // Holiday markers — applied to EVERY RDO slip (real bids and BLANK alike).
+        // Row 3 gets a 2-letter code for any holiday in that column. Row 4 gets a "$"
+        // under each paid (MOU 30/39) holiday. State1/state2 marks live on rows 1-2,
+        // so holidays never collide with the officer's selections.
+        padded[2] = slot.days.map(d => holidayCodeFor(d.date));
+        padded[3] = slot.days.map(d => {
+          const h = holidayFor(d.date);
+          return h && h.paid ? '$' : '';
+        });
         return padded;
       })()
     });
@@ -2186,8 +2152,58 @@ function generateCombinedPDF() {
     doc.text(labelText, PG_W / 2, lineY + 2, { align: 'center' });
   }
 
-  // Single footer at the very bottom of the page
-  pdfDrawFooter(doc, PG_H - PAGE_MARGIN - 14, isEmptyBid);
+  // Holiday legend — placed directly below the last slip with the same spacing as
+  // the cut-here lines that sit between slips. Only included when holidays actually
+  // appear in the printed slips (now that holiday markers ride on every RDO slip).
+  if (slips.length > 0) {
+    const lastSlip = slips[slips.length - 1];
+    // Holiday legend baseline ~5pt below the last slip's bottom border.
+    const legendY = lastSlip.y + lastSlip.h + 5;
+
+    // Collect which holidays are actually printed. Only RDO slips actually printed
+    // count for this; Watch BID dates aren't included because that slip doesn't
+    // render the row 3/4 holiday markers.
+    const seen = new Set();
+    let anyPaid = false;
+    dpIndicesToPrint.forEach(slotIdx => {
+      const slot = rdoSlots[slotIdx];
+      slot.days.forEach(d => {
+        const h = holidayFor(d.date);
+        if (h) {
+          seen.add(h.name);
+          if (h.paid) anyPaid = true;
+        }
+      });
+    });
+
+    const presentEntries = HOLIDAY_CODES.filter(([name]) => seen.has(name));
+    if (presentEntries.length > 0 || anyPaid) {
+      const compactNames = {
+        "New Year's Day":   "New Year Day",
+        "MLK Jr. Day":      "MLK Day",
+        "Presidents' Day":  "Presidents' Day",
+        "Easter Sunday":    "Easter",
+        "Memorial Day":     "Memorial Day",
+        "Juneteenth":       "Juneteenth",
+        "Independence Day": "Independence Day",
+        "Labor Day":        "Labor Day",
+        "Columbus Day":     "Columbus Day",
+        "Veteran's Day":    "Veterans Day",
+        "Thanksgiving Day": "Thanksgiving Day",
+        "Christmas Eve":    "Christmas Eve",
+        "Christmas Day":    "Christmas Day",
+        "New Year's Eve":   "NYE",
+      };
+      const parts = [];
+      if (anyPaid) parts.push('$ - Paid MOU Holiday');
+      presentEntries.forEach(([n, c]) => parts.push(`${c}-${compactNames[n] || n}`));
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.5);
+      doc.setTextColor(80, 80, 80);
+      doc.text(parts.join(' · '), PG_W / 2, legendY, { align: 'center' });
+    }
+  }
 
   // ---- Filename + email-subject helpers ----
   const lastName = (name || '').split(',')[0].trim() || 'unsigned';
@@ -2265,6 +2281,7 @@ function generateCombinedPDF() {
   // Build recipient list based on what's in the bid:
   //  - No RDO selections (watch bid only) → PSSscheduling@lawa.org
   //  - Any RDO selections                → PatrolSchedulingWatch{N}@lawa.org for current watch
+  //  - PLUS pssannualvacation@lawa.org if any DP has more than 3 VC days (in either choice)
   const recipients = [];
   if (hasAnyRDO) {
     if (curWatch === '1' || curWatch === '2' || curWatch === '3') {
@@ -2276,6 +2293,11 @@ function generateCombinedPDF() {
   } else {
     recipients.push('PSSscheduling@lawa.org');
   }
+  // Annual vacation cc'd when any DP has 4+ VC days (in either 1st or 2nd choice).
+  const anyDPHasManyVC = rdoSlots.some(slot =>
+    slot.days.filter(d => d.state1 === 'vac' || d.state2 === 'vac').length > 3
+  );
+  if (anyDPHasManyVC) recipients.push('pssannualvacation@lawa.org');
 
   const body = `Submitting my Watch / Days-Off Bid for the period DP ${dps[0].dp}–${dps[2].dp} (${fmtMDDYYYY(dps[0].start)} – ${fmtMDDYYYY(dps[2].end)}).\n\nForm attached.`;
 
@@ -2356,10 +2378,10 @@ function drawAPD086(doc, y, h, data) {
   const contentBottomY = y + h - outerInsetY - innerOffset - contentPad;
 
   // Compute internal row heights to fit content area.
-  const titleH = 16;     // 2 lines: title + subtitle
+  const titleH = 18;     // 2 lines: title + subtitle (centered, with breathing room)
   const officerH = 22;   // 5-column officer info
-  const subtitleH = 11;
-  const choiceH = 26;    // 4-column choice row
+  const subtitleH = 12;
+  const choiceH = 22;    // 4-column choice row — matches officer row height for consistency
   const headerRowH = 11; // day-of-week header
   const dateRowH = 13;
   const markRowH = 13;
@@ -2367,20 +2389,20 @@ function drawAPD086(doc, y, h, data) {
   const nDateRows = data.dateRows.length;
   const nMarkRows = data.markRows.length;
 
-  // Title (2 stacked centered lines)
+  // Title (2 stacked centered lines), vertically centered in the title block.
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
-  doc.text('LOS ANGELES AIRPORT POLICE', PG_W / 2, contentTopY + 8, { align: 'center' });
+  doc.text('LOS ANGELES AIRPORT POLICE', PG_W / 2, contentTopY + 7, { align: 'center' });
   doc.setFontSize(10);
-  doc.text('WATCH/DAYS-OFF BID REQUEST', PG_W / 2, contentTopY + 18, { align: 'center' });
-  let cy = contentTopY + titleH + 2;
+  doc.text('WATCH/DAYS-OFF BID REQUEST', PG_W / 2, contentTopY + 16, { align: 'center' });
+  let cy = contentTopY + titleH;
 
   // Officer info row (5 columns)
   drawOfficerRow(doc, x, cy, w, officerH, data);
   cy += officerH;
 
-  // Subtitle line
+  // Subtitle line — centered vertically in the subtitle block.
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.text('MARK FIRST AND SECOND CHOICE OF WATCH ASSIGNMENT OR DAYS OFF',
@@ -2409,14 +2431,27 @@ function drawAPD086(doc, y, h, data) {
     cy += markRowH;
   });
 
-  // Optional per-slip mini legend, drawn just above the bottom inner border.
-  // Used on RDO slips so the cutaway/separated slip has its own self-contained legend.
+  // Optional per-slip mini legend, placed just above the inner bottom border.
   if (data.showLegend) {
-    const legendY = contentBottomY - 1;
+    // Vertically center the form-number stamp and the symbol legend in the gap
+    // between the last mark row (cy) and the inner bottom border (contentBottomY).
+    // The +2 nudge accounts for text's optical center sitting slightly below the
+    // baseline midpoint (cap-height geometry).
+    // Vertically center the form-number stamp and the symbol legend in the gap
+    // between the last mark row (cy) and the inner bottom border (contentBottomY).
+    // Optical center: baseline sits about 0.5×(cap-height) below the gap midpoint
+    // so the visible glyphs are evenly framed top-to-bottom.
+    const legendY = (cy + contentBottomY) / 2 + 1;
+    // "APD FORM 086" stamp — bold, bottom-left of the slip's content area.
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(5.4);
+    doc.setTextColor(70, 70, 70);
+    doc.text('APD FORM 086', x + 2, legendY);
+    // Centered symbol legend.
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(5.4);
     doc.setTextColor(70, 70, 70);
-    const legendText = 'O-Regular · V-Vacation · T-Training · M/L-Military Leave · H-Holiday · JD-Jury Duty · FL-Family Leave · SK-Sick';
+    const legendText = 'O-Regular Day Off · V-Vacation · T-Training · M/L-Military Leave · H-Holiday · JD-Jury Duty · FL-Family Leave · SK-Sick';
     doc.text(legendText, PG_W / 2, legendY, { align: 'center' });
   }
 }
@@ -2460,8 +2495,8 @@ function drawChoiceRow(doc, x, y, w, rowH, data) {
     doc.text(headers[i], cx + 3, y + 8);
     if (values[i]) {
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.text(String(values[i]), cx + cw / 2, y + rowH - 5, { align: 'center' });
+      doc.setFontSize(11);
+      doc.text(String(values[i]), cx + cw / 2, y + rowH - 4, { align: 'center' });
     }
   }
 }
