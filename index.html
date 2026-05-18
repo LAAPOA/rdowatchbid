@@ -1139,6 +1139,102 @@
     color: var(--ink-soft);
   }
 
+  /* Subtle footer with the About link — sits below the main form, low-contrast
+     so it never competes with the bid workflow. */
+  .app-footer {
+    margin-top: 28px;
+    padding: 18px 8px 24px;
+    text-align: center;
+    border-top: 1px solid var(--line);
+  }
+  .footer-link {
+    background: none;
+    border: none;
+    color: var(--ink-soft);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    padding: 6px 10px;
+    transition: color 0.15s;
+  }
+  .footer-link:hover {
+    color: var(--ink-deep);
+    text-decoration: underline;
+  }
+
+  /* About modal — shown when the user clicks the About link. Backdrop covers
+     the page; the panel is centered with a max-width for readability. */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 20px;
+  }
+  .modal-backdrop.show {
+    display: flex;
+  }
+  .modal-panel {
+    position: relative;
+    background: var(--paper);
+    color: var(--ink-deep);
+    padding: 32px 36px 28px;
+    border-radius: 6px;
+    max-width: 540px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .modal-panel h2 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 22px;
+    color: var(--navy);
+    margin: 0 0 14px;
+    letter-spacing: 0.02em;
+  }
+  .modal-panel h3 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--navy);
+    margin: 22px 0 8px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 4px;
+  }
+  .modal-panel p,
+  .modal-panel ul {
+    margin: 0 0 12px;
+  }
+  .modal-panel ul {
+    padding-left: 22px;
+  }
+  .modal-panel li {
+    margin-bottom: 8px;
+  }
+  .modal-close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    line-height: 1;
+    color: var(--ink-soft);
+    cursor: pointer;
+    padding: 4px 10px;
+  }
+  .modal-close:hover {
+    color: var(--ink-deep);
+  }
+
   .toast {
     position: fixed;
     bottom: 24px;
@@ -1322,6 +1418,30 @@
     </div>
   </section>
 
+  <footer class="app-footer">
+    <button type="button" class="footer-link" onclick="document.getElementById('about-modal').classList.add('show')">About</button>
+  </footer>
+
+</div>
+
+<!-- About modal — opened from the footer "About" link. Closed by clicking the
+     backdrop, the X, or pressing Escape. -->
+<div id="about-modal" class="modal-backdrop" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal-panel" role="dialog" aria-labelledby="about-title">
+    <button type="button" class="modal-close" onclick="document.getElementById('about-modal').classList.remove('show')" aria-label="Close">×</button>
+    <h2 id="about-title">About this tool</h2>
+    <p>Built by LAAPOA for LAXPD officers to submit Watch and RDO bids.</p>
+
+    <h3>Your data</h3>
+    <ul>
+      <li>Your <strong>name, serial, rank, and watch</strong> are saved on this device only (browser localStorage) so you don't have to retype them each time. Clear them anytime via the "Forget saved info" option in the form.</li>
+      <li>Your <strong>bid selections never leave your device</strong> until you generate the PDF and email it yourself.</li>
+      <li>Aggregate page visits are tracked via <strong>Cloudflare Web Analytics</strong> — no cookies, no personal data, no fingerprinting.</li>
+    </ul>
+
+    <h3>Questions?</h3>
+    <p>Contact Mike Dear.</p>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -2407,6 +2527,16 @@ function toast(msg, isError) {
   toastEl.classList.add('show');
   setTimeout(() => toastEl.classList.remove('show'), 3200);
 }
+
+// Close the About modal when the user presses Escape.
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const aboutModal = document.getElementById('about-modal');
+    if (aboutModal && aboutModal.classList.contains('show')) {
+      aboutModal.classList.remove('show');
+    }
+  }
+});
 
 /* ============================================================
    PDF GENERATION — APD Form 086
