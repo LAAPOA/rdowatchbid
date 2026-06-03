@@ -1141,6 +1141,14 @@
 
   /* Subtle footer with the About link — sits below the main form, low-contrast
      so it never competes with the bid workflow. */
+  /* Current bid period option in the Watch BID period dropdown — bolded so it's
+     easy to spot at a glance while scrolling. CSS option styling works on most
+     desktop browsers; native mobile pickers may not honor it. */
+  option.dp-current {
+    font-weight: 700;
+    color: var(--navy);
+  }
+
   .app-footer {
     margin-top: 28px;
     padding: 18px 8px 24px;
@@ -1508,35 +1516,75 @@ function buildWatchDPOptions(selectEl) {
   selectEl.innerHTML = '';
   const now = new Date();
 
-  // Build a list of all groups across the years we care about: from 1 year before
-  // the anchor through ~4 years after.
-  const groups = [];
-  const startYear = DP_ANCHOR.year - 1;
-  const endYear = DP_ANCHOR.year + 4;
-  for (let yr = startYear; yr <= endYear; yr++) {
+  // Each "watch bid period" is a quarterly DP group: 1-3, 4-6, 7-9, 10-13.
+  // Build a flat ordered list of groups across a wide span of years; we'll then
+  // slice a rolling window of 13 (2 back + current + 10 forward) based on today.
+  const allGroups = [];
+  const earliestYear = now.getFullYear() - 2;
+  const latestYear = now.getFullYear() + 4;
+  for (let yr = earliestYear; yr <= latestYear; yr++) {
     [[1, 3], [4, 6], [7, 9], [10, 13]].forEach(([first, last]) => {
       const dpsInGroup = [];
       for (let dp = first; dp <= last; dp++) dpsInGroup.push(getDPInfo(dp, yr));
-      groups.push(dpsInGroup);
+      allGroups.push(dpsInGroup);
     });
   }
 
-  groups.forEach(g => {
-    // Skip groups whose final DP ended before today.
-    if (g[g.length - 1].end < now) return;
+  // Find the index of the group whose date range contains today. If today falls
+  // BETWEEN two groups (gap day shouldn't happen, but guard), fall back to the
+  // next upcoming group.
+  let currentIdx = allGroups.findIndex(g =>
+    now >= g[0].start && now <= g[g.length - 1].end
+  );
+  if (currentIdx === -1) {
+    currentIdx = allGroups.findIndex(g => g[0].start > now);
+    if (currentIdx === -1) currentIdx = allGroups.length - 1;
+  }
+
+  // Slice a rolling window: 2 groups back + current + 10 groups forward.
+  // Clamp to array bounds so we don't fall off either end if currentIdx is small.
+  const windowStart = Math.max(0, currentIdx - 2);
+  const windowEnd = Math.min(allGroups.length, currentIdx + 11); // exclusive
+  const visible = allGroups.slice(windowStart, windowEnd);
+
+  // Build <option> elements for the windowed groups. The group containing today's
+  // date is tagged with a CSS class so it renders bold in the dropdown.
+  const currentGroupKey = allGroups[currentIdx]
+    ? `${allGroups[currentIdx][0].dp}-${allGroups[currentIdx][0].year}`
+    : null;
+  visible.forEach(g => {
     const opt = document.createElement('option');
-    opt.value = `${g[0].dp}-${g[0].year}`;
+    const key = `${g[0].dp}-${g[0].year}`;
+    opt.value = key;
     const dpLabel = `DP ${g[0].dp}–${g[g.length - 1].dp}`;
     opt.textContent = `${dpLabel} • ${g[0].year} (${fmtDate(g[0].start)} – ${fmtDate(g[g.length - 1].end)})`;
+    if (key === currentGroupKey) {
+      opt.classList.add('dp-current');
+    }
     selectEl.appendChild(opt);
   });
 
-  // Default: anchor's containing group (DP 7-9 of 2026 currently).
-  const [anchorFirst] = dpGroupForYearAndStartDP(DP_ANCHOR.dp);
-  const defaultVal = `${anchorFirst}-${DP_ANCHOR.year}`;
-  const anchorOpt = Array.from(selectEl.options).find(o => o.value === defaultVal);
-  if (anchorOpt) anchorOpt.selected = true;
-  else if (selectEl.options.length > 0) selectEl.selectedIndex = 0;
+  // Default-select logic: normally select the current bid period, BUT if we're
+  // within 29 days of the next bid period starting, default to the next period
+  // instead (officers are typically preparing the upcoming bid at that point).
+  let defaultGroup = allGroups[currentIdx];
+  const nextGroup = allGroups[currentIdx + 1];
+  if (nextGroup) {
+    const daysUntilNext = Math.ceil(
+      (nextGroup[0].start.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    if (daysUntilNext >= 0 && daysUntilNext <= 29) {
+      defaultGroup = nextGroup;
+    }
+  }
+  if (defaultGroup) {
+    const defaultVal = `${defaultGroup[0].dp}-${defaultGroup[0].year}`;
+    const defaultOpt = Array.from(selectEl.options).find(o => o.value === defaultVal);
+    if (defaultOpt) defaultOpt.selected = true;
+    else if (selectEl.options.length > 0) selectEl.selectedIndex = 0;
+  } else if (selectEl.options.length > 0) {
+    selectEl.selectedIndex = 0;
+  }
 }
 
 // RDO form: list every DP individually
