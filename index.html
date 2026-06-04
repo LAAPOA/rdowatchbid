@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <style>
   :root {
     --navy: #0a1f3d;
@@ -2612,6 +2613,181 @@ const WATERMARK_GRAY = 211; // text watermark color (WATCH BID letters, holiday 
                             // still feeling like a faint background mark.
 
 
+// ===================== DUAL OUTPUT: EXCEL (APD-086) =====================
+// Generates an .xlsx companion to the PDF using ExcelJS, reproducing the
+// APD-086 "WATCH/DAYS-OFF BID REQUEST" form layout captured from the
+// RDO_Bidder.xlsx template (borders, weekend shading, merges, fonts, the
+// m/d;@ grid number format, page setup). The workbook contains:
+//   • A "Watch Bid" sheet (when a watch choice is set) — the bid period with
+//     ONE DP PER ROW across the 28-column (4-week) grid, watch 1st/2nd choice
+//     in the choice boxes.
+//   • One sheet per DP that has RDO selections, named "DP <n>" — that DP's
+//     28 dates on row 12, 1st-choice marks on row 13, 2nd-choice marks on
+//     row 14, and holiday codes on row 15 (mirrors the RDO PDF slip).
+// In full-year mode, a watch sheet is produced per quarter group.
+
+// Compact template chrome captured from RDO_Bidder.xlsx. Per cell: v=value,
+// s=font size (default 11), b=bold, i=italic, h=halign(c/l/r), vy=valign(m/t/b),
+// w=wrap, g=gray weekend/header fill, bd=4-char border code (T,B,L,R using
+// t=thin D=double m=medium k=thick h=hair .=none), nf=number format.
+const APD_SPEC = {"merges":["P4:Q4","Q9:W9","B10:AC10","B6:AC6","X5:AC5","J8:P8","X4:AC4","N5:O5","B8:I8","B7:AC7","B3:AC3","B5:M5","Q8:W8","J9:P9","X9:AC9","R5:W5","B4:M4","B9:I9","B2:AC2","F16:AC16","R4:W4","X8:AC8","P5:Q5","N4:O4"],"cw":{"A":3.0,"B":4.71,"AD":3.71},"rh":{"1":6.0,"2":18.75,"3":19.5,"4":15.75,"5":24.0,"6":15.75,"7":13.5,"8":15.75,"9":24.0,"10":16.5,"11":24.0,"12":24.0,"13":24.0,"14":24.0,"15":24.0,"16":15.75},"cells":{"B2":{"v":"LOS ANGELES AIRPORT POLICE","s":14.0,"b":1,"h":"c"},"B3":{"v":"WATCH/DAYS-OFF BID REQUEST","s":14.0,"b":1,"h":"c"},"B4":{"v":"LAST NAME, FI, SERIAL #:","b":1,"h":"l","vy":"t","bd":"D.D."},"C4":{"bd":"D..."},"D4":{"bd":"D..."},"E4":{"bd":"D..."},"F4":{"bd":"D..."},"G4":{"bd":"D..."},"H4":{"bd":"D..."},"I4":{"bd":"D..."},"J4":{"bd":"D..."},"K4":{"bd":"D..."},"L4":{"bd":"D..."},"M4":{"bd":"D..."},"N4":{"v":"WATCH","b":1,"h":"c","bd":"D.DD"},"O4":{"bd":"D..D"},"P4":{"v":"DP#","b":1,"h":"c","bd":"D..."},"Q4":{"bd":"D..."},"R4":{"v":"DP START DATE:","b":1,"h":"c","bd":"D.DD"},"S4":{"bd":"D..."},"T4":{"bd":"D..."},"U4":{"bd":"D..."},"V4":{"bd":"D..."},"W4":{"bd":"D..D"},"X4":{"v":"DP END DATE:","b":1,"h":"c","bd":"D..D"},"Y4":{"bd":"D..."},"Z4":{"bd":"D..."},"AA4":{"bd":"D..."},"AB4":{"bd":"D..."},"AC4":{"bd":"D..D"},"B5":{"fn":"Arial","s":12.0,"b":1,"h":"c","vy":"m","bd":".DD."},"C5":{"bd":".D.."},"D5":{"bd":".D.."},"E5":{"bd":".D.."},"F5":{"bd":".D.."},"G5":{"bd":".D.."},"H5":{"bd":".D.."},"I5":{"bd":".D.."},"J5":{"bd":".D.."},"K5":{"bd":".D.."},"L5":{"bd":".D.."},"M5":{"bd":".D.."},"N5":{"fn":"Arial","s":12.0,"h":"c","vy":"m","bd":".DDD"},"O5":{"bd":".D.D"},"P5":{"fn":"Arial","s":12.0,"h":"c","vy":"m","bd":".D..","nf":"0"},"Q5":{"bd":".D.."},"R5":{"fn":"Arial","s":12.0,"h":"c","vy":"m","bd":".DDD","nf":"mm-dd-yy"},"S5":{"bd":".D.."},"T5":{"bd":".D.."},"U5":{"bd":".D.."},"V5":{"bd":".D.."},"W5":{"bd":".D.D"},"X5":{"fn":"Arial","s":12.0,"h":"c","vy":"m","bd":".D.D","nf":"mm-dd-yy"},"Y5":{"bd":".D.."},"Z5":{"bd":".D.."},"AA5":{"bd":".D.."},"AB5":{"bd":".D.."},"AC5":{"bd":".D.D"},"B6":{"v":"MARK FIRST AND SECOND CHOICE OF WATCH ASSIGNMENT OR DAYS OFF","h":"c"},"B7":{"h":"c","bd":".D.."},"C7":{"bd":".D.."},"D7":{"bd":".D.."},"E7":{"bd":".D.."},"F7":{"bd":".D.."},"G7":{"bd":".D.."},"H7":{"bd":".D.."},"I7":{"bd":".D.."},"J7":{"bd":".D.."},"K7":{"bd":".D.."},"L7":{"bd":".D.."},"M7":{"bd":".D.."},"N7":{"bd":".D.."},"O7":{"bd":".D.."},"P7":{"bd":".D.."},"Q7":{"bd":".D.."},"R7":{"bd":".D.."},"S7":{"bd":".D.."},"T7":{"bd":".D.."},"U7":{"bd":".D.."},"V7":{"bd":".D.."},"W7":{"bd":".D.."},"X7":{"bd":".D.."},"Y7":{"bd":".D.."},"Z7":{"bd":".D.."},"AA7":{"bd":".D.."},"AB7":{"bd":".D.."},"AC7":{"bd":".D.."},"B8":{"v":"1ST CHOICE","b":1,"h":"l","vy":"t","bd":"D.DD"},"C8":{"bd":"D..."},"D8":{"bd":"D..."},"E8":{"bd":"D..."},"F8":{"bd":"D..."},"G8":{"bd":"D..."},"H8":{"bd":"D..."},"I8":{"bd":"D..D"},"J8":{"v":"2ND CHOICE","b":1,"h":"l","vy":"t","bd":"D.DD"},"K8":{"bd":"D..."},"L8":{"bd":"D..."},"M8":{"bd":"D..."},"N8":{"bd":"D..."},"O8":{"bd":"D..."},"P8":{"bd":"D..D"},"Q8":{"v":"SUPERVISOR'S INITIALS","b":1,"h":"l","vy":"t","bd":"D.DD"},"R8":{"bd":"D..."},"S8":{"bd":"D..."},"T8":{"bd":"D..."},"U8":{"bd":"D..."},"V8":{"bd":"D..."},"W8":{"bd":"D..D"},"X8":{"v":"DATE RECEIVED","b":1,"h":"l","vy":"t","bd":"D.DD"},"Y8":{"bd":"D..."},"Z8":{"bd":"D..."},"AA8":{"bd":"D..."},"AB8":{"bd":"D..."},"AC8":{"bd":"D..D"},"B9":{"h":"c","vy":"t","bd":".DDD"},"C9":{"bd":".D.."},"D9":{"bd":".D.."},"E9":{"bd":".D.."},"F9":{"bd":".D.."},"G9":{"bd":".D.."},"H9":{"bd":".D.."},"I9":{"bd":".D.D"},"J9":{"h":"c","vy":"t","bd":".DDD"},"K9":{"bd":".D.."},"L9":{"bd":".D.."},"M9":{"bd":".D.."},"N9":{"bd":".D.."},"O9":{"bd":".D.."},"P9":{"bd":".D.D"},"Q9":{"h":"c","vy":"t","bd":".DDD"},"R9":{"bd":".D.."},"S9":{"bd":".D.."},"T9":{"bd":".D.."},"U9":{"bd":".D.."},"V9":{"bd":".D.."},"W9":{"bd":".D.D"},"X9":{"h":"c","vy":"t","bd":".DDD","nf":"mm-dd-yy"},"Y9":{"bd":".D.."},"Z9":{"bd":".D.."},"AA9":{"bd":".D.."},"AB9":{"bd":".D.."},"AC9":{"bd":".D.D"},"B10":{"h":"c","bd":"D..."},"C10":{"bd":"D..."},"D10":{"bd":"D..."},"E10":{"bd":"D..."},"F10":{"bd":"D..."},"G10":{"bd":"D..."},"H10":{"bd":"D..."},"I10":{"bd":"D..."},"J10":{"bd":"D..."},"K10":{"bd":"D..."},"L10":{"bd":"D..."},"M10":{"bd":"D..."},"N10":{"bd":"D..."},"O10":{"bd":"D..."},"P10":{"bd":"D..."},"Q10":{"bd":"D..."},"R10":{"bd":"D..."},"S10":{"bd":"D..."},"T10":{"bd":"D..."},"U10":{"bd":"D..."},"V10":{"bd":"D..."},"W10":{"bd":"D..."},"X10":{"bd":"D..."},"Y10":{"bd":"D..."},"Z10":{"bd":"D..."},"AA10":{"bd":"D..."},"AB10":{"bd":"D..."},"AC10":{"bd":"D..."},"B11":{"v":"SU","s":12.0,"b":1,"h":"c","vy":"m","g":1,"bd":"D.Dt"},"C11":{"v":"M","s":12.0,"b":1,"h":"c","vy":"m","bd":"D.tt"},"D11":{"v":"TU","s":12.0,"b":1,"h":"c","vy":"m","bd":"D.tt"},"E11":{"v":"W","s":12.0,"b":1,"h":"c","vy":"m","bd":"D.tt"},"F11":{"v":"TH","s":12.0,"b":1,"h":"c","vy":"m","bd":"D.tt"},"G11":{"v":"F","s":12.0,"b":1,"h":"c","vy":"m","bd":"D.tt"},"H11":{"v":"SA","s":12.0,"b":1,"h":"c","vy":"m","g":1,"bd":"D.tt"},"I11":{"v":"SU","s":12.0,"b":1,"h":"c","vy":"m","g":1,"bd":"D.tt"},"J11":{"v":"M","s":12.0,"b":1,"h":"c","vy":"m","bd":"D.tt"},"K11":{"v":"T","s":12.0,"b":1,"h":"c","vy":"m","bd":"D.tt"},"L11":{"v":"W","s":12.0,"b":1,"h":"c","vy":"m","bd":"D.tt"},"M11":{"v":"TH","s":12.0,"b":1,"h":"c","vy":"m","bd":"D.tt"},"N11":{"v":"F","s":12.0,"b":1,"h":"c","vy":"m","bd":"D.tt"},"O11":{"v":"SA","s":12.0,"b":1,"h":"c","vy":"m","g":1,"bd":"D.tt"},"P11":{"v":"SU","s":12.0,"b":1,"h":"c","vy":"m","g":1,"bd":"D.tt"},"Q11":{"v":"M","s":12.0,"b":1,"h":"c","vy":"m","bd":"D.tt"},"R11":{"v":"T","s":12.0,"b":1,"h":"c","vy":"m","bd":"D.tt"},"S11":{"v":"W","s":12.0,"b":1,"h":"c","vy":"m","bd":"D.tt"},"T11":{"v":"TH","s":12.0,"b":1,"h":"c","vy":"m","bd":"D.tt"},"U11":{"v":"F","s":12.0,"b":1,"h":"c","vy":"m","bd":"D.tt"},"V11":{"v":"SA","s":12.0,"b":1,"h":"c","vy":"m","g":1,"bd":"D.tt"},"W11":{"v":"SU","s":12.0,"b":1,"h":"c","vy":"m","g":1,"bd":"D.tt"},"X11":{"v":"M","s":12.0,"b":1,"h":"c","vy":"m","bd":"D.tt"},"Y11":{"v":"T","s":12.0,"b":1,"h":"c","vy":"m","bd":"D.tt"},"Z11":{"v":"W","s":12.0,"b":1,"h":"c","vy":"m","bd":"D.tt"},"AA11":{"v":"TH","s":12.0,"b":1,"h":"c","vy":"m","bd":"D.tt"},"AB11":{"v":"F","s":12.0,"b":1,"h":"c","vy":"m","bd":"D.tt"},"AC11":{"v":"SA","s":12.0,"b":1,"h":"c","vy":"m","g":1,"bd":"D.tD"},"B12":{"s":9.0,"h":"c","vy":"m","g":1,"bd":"tDDt","nf":"m/d;@"},"C12":{"s":9.0,"h":"c","vy":"m","g":1,"bd":"tDDt","nf":"m/d;@"},"D12":{"s":9.0,"h":"c","vy":"m","bd":"tDtt","nf":"m/d;@"},"E12":{"s":9.0,"h":"c","vy":"m","bd":"tDtt","nf":"m/d;@"},"F12":{"s":9.0,"h":"c","vy":"m","bd":"tDtt","nf":"m/d;@"},"G12":{"s":9.0,"h":"c","vy":"m","bd":"tDtt","nf":"m/d;@"},"H12":{"s":9.0,"h":"c","vy":"m","g":1,"bd":"tDtt","nf":"m/d;@"},"I12":{"s":9.0,"h":"c","vy":"m","g":1,"bd":"tDtt","nf":"m/d;@"},"J12":{"s":9.0,"h":"c","vy":"m","bd":"tDtt","nf":"m/d;@"},"K12":{"s":9.0,"h":"c","vy":"m","bd":"tDtt","nf":"m/d;@"},"L12":{"s":9.0,"h":"c","vy":"m","bd":"tDtt","nf":"m/d;@"},"M12":{"s":9.0,"h":"c","vy":"m","bd":"tDtt","nf":"m/d;@"},"N12":{"s":9.0,"h":"c","vy":"m","bd":"tDtt","nf":"m/d;@"},"O12":{"s":9.0,"h":"c","vy":"m","g":1,"bd":"tDtt","nf":"m/d;@"},"P12":{"s":9.0,"h":"c","vy":"m","g":1,"bd":"tDtt","nf":"m/d;@"},"Q12":{"s":9.0,"h":"c","vy":"m","bd":"tDtt","nf":"m/d;@"},"R12":{"s":9.0,"h":"c","vy":"m","bd":"tDtt","nf":"m/d;@"},"S12":{"s":9.0,"h":"c","vy":"m","bd":"tDtt","nf":"m/d;@"},"T12":{"s":9.0,"h":"c","vy":"m","bd":"tDtt","nf":"m/d;@"},"U12":{"s":9.0,"h":"c","vy":"m","bd":"tDtt","nf":"m/d;@"},"V12":{"s":9.0,"h":"c","vy":"m","g":1,"bd":"tDtt","nf":"m/d;@"},"W12":{"s":9.0,"h":"c","vy":"m","g":1,"bd":"tDtt","nf":"m/d;@"},"X12":{"s":9.0,"h":"c","vy":"m","bd":"tDtt","nf":"m/d;@"},"Y12":{"s":9.0,"h":"c","vy":"m","bd":"tDtt","nf":"m/d;@"},"Z12":{"s":9.0,"h":"c","vy":"m","bd":"tDtt","nf":"m/d;@"},"AA12":{"s":9.0,"h":"c","vy":"m","bd":"tDtt","nf":"m/d;@"},"AB12":{"s":9.0,"h":"c","vy":"m","bd":"tDtt","nf":"m/d;@"},"AC12":{"s":9.0,"h":"c","vy":"m","g":1,"bd":"tDtD","nf":"m/d;@"},"B13":{"s":9.0,"h":"c","vy":"m","g":1,"bd":".tDt","nf":"m/d;@"},"C13":{"s":9.0,"h":"c","vy":"m","bd":".ttt","nf":"m/d;@"},"D13":{"s":9.0,"h":"c","vy":"m","bd":".ttt","nf":"m/d;@"},"E13":{"s":9.0,"h":"c","vy":"m","bd":".ttt","nf":"m/d;@"},"F13":{"s":9.0,"h":"c","vy":"m","bd":".ttt","nf":"m/d;@"},"G13":{"s":9.0,"h":"c","vy":"m","bd":".ttt","nf":"m/d;@"},"H13":{"s":9.0,"h":"c","vy":"m","g":1,"bd":".ttt","nf":"m/d;@"},"I13":{"s":9.0,"h":"c","vy":"m","g":1,"bd":".ttt","nf":"m/d;@"},"J13":{"s":9.0,"h":"c","vy":"m","bd":".ttt","nf":"m/d;@"},"K13":{"s":9.0,"h":"c","vy":"m","bd":".ttt","nf":"m/d;@"},"L13":{"s":9.0,"h":"c","vy":"m","bd":".ttt","nf":"m/d;@"},"M13":{"s":9.0,"h":"c","vy":"m","bd":".ttt","nf":"m/d;@"},"N13":{"s":9.0,"h":"c","vy":"m","bd":".ttt","nf":"m/d;@"},"O13":{"s":9.0,"h":"c","vy":"m","g":1,"bd":".ttt","nf":"m/d;@"},"P13":{"s":9.0,"h":"c","vy":"m","g":1,"bd":".ttt","nf":"m/d;@"},"Q13":{"s":9.0,"h":"c","vy":"m","bd":".ttt","nf":"m/d;@"},"R13":{"s":9.0,"h":"c","vy":"m","bd":".ttt","nf":"m/d;@"},"S13":{"s":9.0,"h":"c","vy":"m","bd":".ttt","nf":"m/d;@"},"T13":{"s":9.0,"h":"c","vy":"m","bd":".ttt","nf":"m/d;@"},"U13":{"s":9.0,"h":"c","vy":"m","bd":".ttt","nf":"m/d;@"},"V13":{"s":9.0,"h":"c","vy":"m","g":1,"bd":".ttt","nf":"m/d;@"},"W13":{"s":9.0,"h":"c","vy":"m","g":1,"bd":".ttt","nf":"m/d;@"},"X13":{"s":9.0,"h":"c","vy":"m","bd":".ttt","nf":"m/d;@"},"Y13":{"s":9.0,"h":"c","vy":"m","bd":".ttt","nf":"m/d;@"},"Z13":{"s":9.0,"h":"c","vy":"m","bd":".ttt","nf":"m/d;@"},"AA13":{"s":9.0,"h":"c","vy":"m","bd":".ttt","nf":"m/d;@"},"AB13":{"s":9.0,"h":"c","vy":"m","bd":".ttt","nf":"m/d;@"},"AC13":{"s":9.0,"h":"c","vy":"m","g":1,"bd":".ttD","nf":"m/d;@"},"B14":{"s":9.0,"h":"c","vy":"m","g":1,"bd":"ttDt","nf":"m/d;@"},"C14":{"s":9.0,"h":"c","vy":"m","bd":"tttt","nf":"m/d;@"},"D14":{"s":9.0,"h":"c","vy":"m","bd":"tttt","nf":"m/d;@"},"E14":{"s":9.0,"h":"c","vy":"m","bd":"tttt","nf":"m/d;@"},"F14":{"s":9.0,"h":"c","vy":"m","bd":"tttt","nf":"m/d;@"},"G14":{"s":9.0,"h":"c","vy":"m","bd":"tttt","nf":"m/d;@"},"H14":{"s":9.0,"h":"c","vy":"m","g":1,"bd":"tttt","nf":"m/d;@"},"I14":{"s":9.0,"h":"c","vy":"m","g":1,"bd":"tttt","nf":"m/d;@"},"J14":{"s":9.0,"h":"c","vy":"m","bd":"tttt","nf":"m/d;@"},"K14":{"s":9.0,"h":"c","vy":"m","bd":"tttt","nf":"m/d;@"},"L14":{"s":9.0,"h":"c","vy":"m","bd":"tttt","nf":"m/d;@"},"M14":{"s":9.0,"h":"c","vy":"m","bd":"tttt","nf":"m/d;@"},"N14":{"s":9.0,"h":"c","vy":"m","bd":"tttt","nf":"m/d;@"},"O14":{"s":9.0,"h":"c","vy":"m","g":1,"bd":"tttt","nf":"m/d;@"},"P14":{"s":9.0,"h":"c","vy":"m","g":1,"bd":"tttt","nf":"m/d;@"},"Q14":{"s":9.0,"h":"c","vy":"m","bd":"tttt","nf":"m/d;@"},"R14":{"s":9.0,"h":"c","vy":"m","bd":"tttt","nf":"m/d;@"},"S14":{"s":9.0,"h":"c","vy":"m","bd":"tttt","nf":"m/d;@"},"T14":{"s":9.0,"h":"c","vy":"m","bd":"tttt","nf":"m/d;@"},"U14":{"s":9.0,"h":"c","vy":"m","bd":"tttt","nf":"m/d;@"},"V14":{"s":9.0,"h":"c","vy":"m","g":1,"bd":"tttt","nf":"m/d;@"},"W14":{"s":9.0,"h":"c","vy":"m","g":1,"bd":"tttt","nf":"m/d;@"},"X14":{"s":9.0,"h":"c","vy":"m","bd":"tttt","nf":"m/d;@"},"Y14":{"s":9.0,"h":"c","vy":"m","bd":"tttt","nf":"m/d;@"},"Z14":{"s":9.0,"h":"c","vy":"m","bd":"tttt","nf":"m/d;@"},"AA14":{"s":9.0,"h":"c","vy":"m","bd":"tttt","nf":"m/d;@"},"AB14":{"s":9.0,"h":"c","vy":"m","bd":"tttt","nf":"m/d;@"},"AC14":{"s":9.0,"h":"c","vy":"m","g":1,"bd":"tttD","nf":"m/d;@"},"B15":{"s":14.0,"b":1,"h":"c","vy":"m","g":1,"bd":"tDDt"},"C15":{"s":14.0,"b":1,"h":"c","vy":"m","bd":"tDtt"},"D15":{"s":14.0,"b":1,"h":"c","vy":"m","bd":"tDtt"},"E15":{"s":14.0,"b":1,"h":"c","vy":"m","bd":"tDtt"},"F15":{"s":14.0,"b":1,"h":"c","vy":"m","bd":"tDtt"},"G15":{"s":14.0,"b":1,"h":"c","vy":"m","bd":"tDtt"},"H15":{"s":14.0,"b":1,"h":"c","vy":"m","g":1,"bd":"tDtt"},"I15":{"s":14.0,"b":1,"h":"c","vy":"m","g":1,"bd":"tDtt"},"J15":{"s":14.0,"b":1,"h":"c","vy":"m","bd":"tDtt"},"K15":{"s":14.0,"b":1,"h":"c","vy":"m","bd":"tDtt"},"L15":{"s":14.0,"b":1,"h":"c","vy":"m","bd":"tDtt"},"M15":{"s":14.0,"b":1,"h":"c","vy":"m","bd":"tDtt"},"N15":{"s":14.0,"b":1,"h":"c","vy":"m","bd":"tDtt"},"O15":{"s":14.0,"b":1,"h":"c","vy":"m","g":1,"bd":"tDtt"},"P15":{"s":14.0,"b":1,"h":"c","vy":"m","g":1,"bd":"tDtt"},"Q15":{"s":14.0,"b":1,"h":"c","vy":"m","bd":"tDtt"},"R15":{"s":14.0,"b":1,"h":"c","vy":"m","bd":"tDtt"},"S15":{"s":14.0,"b":1,"h":"c","vy":"m","bd":"tDtt"},"T15":{"s":14.0,"b":1,"h":"c","vy":"m","bd":"tDtt"},"U15":{"s":14.0,"b":1,"h":"c","vy":"m","bd":"tDtt"},"V15":{"s":14.0,"b":1,"h":"c","vy":"m","g":1,"bd":"tDtt"},"W15":{"s":14.0,"b":1,"h":"c","vy":"m","g":1,"bd":"tDtt"},"X15":{"s":14.0,"b":1,"h":"c","vy":"m","bd":"tDtt"},"Y15":{"s":14.0,"b":1,"h":"c","vy":"m","bd":"tDtt"},"Z15":{"s":14.0,"b":1,"h":"c","vy":"m","bd":"tDtt"},"AA15":{"s":14.0,"b":1,"h":"c","vy":"m","bd":"tDtt"},"AB15":{"s":14.0,"b":1,"h":"c","vy":"m","bd":"tDtt"},"AC15":{"s":14.0,"b":1,"h":"c","vy":"m","g":1,"bd":"tDtD"},"AD15":{"s":14.0,"b":1,"h":"c","vy":"m"},"B16":{"v":"APD FORM 086","s":8.0},"C16":{"s":8.0},"D16":{"s":8.0},"F16":{"v":"Symbols: O-Regular; H - Holiday; V - Vacation; M/L - Military Leave; JD - Jury Duty; FL - Family Leave; SK - Sick","s":9.0,"h":"c"}}};
+
+const APD_BSTYLE = { t: 'thin', D: 'double', m: 'medium', k: 'thick', h: 'hair' };
+const APD_HAL = { c: 'center', l: 'left', r: 'right' };
+const APD_VAL = { m: 'middle', t: 'top', b: 'bottom' };
+
+function apdColLetter(n) {
+  let s = '';
+  while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = (n - m - 1) / 26; }
+  return s;
+}
+
+// Lay down the static APD-086 form chrome on a fresh worksheet.
+function applyApd086Template(ws) {
+  ws.views = [{ showGridLines: false }];
+  ws.pageSetup = {
+    orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 1,
+    horizontalCentered: true,
+    margins: { left: 0.25, right: 0.2, top: 0.25, bottom: 0.25, header: 0, footer: 0 }
+  };
+  ws.getColumn(1).width = APD_SPEC.cw['A'] || 3;
+  for (let c = 2; c <= 29; c++) ws.getColumn(c).width = 4.71; // 28-cell grid B..AC
+  ws.getColumn(30).width = APD_SPEC.cw['AD'] || 3.71;
+  for (const r in APD_SPEC.rh) ws.getRow(+r).height = APD_SPEC.rh[r];
+  // Apply per-cell styling FIRST, then merge. ExcelJS drops a merge master's
+  // left border and a slave's right/bottom border if the merge happens before
+  // the borders are set, so styling must precede mergeCells().
+  for (const addr in APD_SPEC.cells) {
+    const e = APD_SPEC.cells[addr];
+    const cell = ws.getCell(addr);
+    if ('v' in e) cell.value = e.v;
+    cell.font = { name: e.fn || 'Calibri', size: e.s || 11, bold: !!e.b, italic: !!e.i };
+    if (e.h || e.vy || e.w) cell.alignment = { horizontal: APD_HAL[e.h], vertical: APD_VAL[e.vy], wrapText: !!e.w };
+    if (e.g) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+    if (e.bd) {
+      const b = {}, sides = ['top', 'bottom', 'left', 'right'];
+      for (let i = 0; i < 4; i++) if (APD_BSTYLE[e.bd[i]]) b[sides[i]] = { style: APD_BSTYLE[e.bd[i]] };
+      cell.border = b;
+    }
+    if (e.nf) cell.numFmt = e.nf;
+  }
+  APD_SPEC.merges.forEach(m => ws.mergeCells(m));
+}
+
+// Overlay dynamic bid data onto a templated sheet.
+//  info = { name, watch, dp, startDate(Date), endDate(Date) }
+//  choice1 / choice2 = text for the 1ST / 2ND CHOICE boxes ('' on RDO sheets)
+//  gridRows = up to 4 entries, each { dates:[28 Date|null] } or { marks:[28 string] }
+function fillApd086Sheet(ws, info, choice1, choice2, gridRows) {
+  ws.getCell('B5').value = info.name || '';
+  const setText = (addr, v) => { const c = ws.getCell(addr); c.value = (v == null ? '' : String(v)); c.numFmt = '@'; };
+  setText('N5', info.watch);
+  setText('P5', info.dp);
+  const sd = ws.getCell('R5'); sd.value = info.startDate || ''; if (info.startDate instanceof Date) sd.numFmt = 'm/d/yyyy';
+  const ed = ws.getCell('X5'); ed.value = info.endDate || ''; if (info.endDate instanceof Date) ed.numFmt = 'm/d/yyyy';
+  ws.getCell('B9').value = choice1 || '';
+  ws.getCell('J9').value = choice2 || '';
+  gridRows.slice(0, 4).forEach((row, i) => {
+    const r = 12 + i;
+    for (let k = 0; k < 28; k++) {
+      const cell = ws.getCell(`${apdColLetter(2 + k)}${r}`);
+      if (row.dates) { if (row.dates[k]) cell.value = row.dates[k]; }
+      else if (row.marks) { if (row.marks[k]) cell.value = row.marks[k]; }
+    }
+  });
+}
+
+// Build the full bid workbook from the same data the PDF uses.
+//  opts: { nameWithRank, serial, curWatch, dps, rdoSlots, includedDPs,
+//          hasWatchBid, watch1, watch2, isFullYear, watchStateGroups, isEmptyBid }
+function buildBidWorkbook(opts) {
+  const {
+    nameWithRank, serial, curWatch, dps, rdoSlots, includedDPs,
+    hasWatchBid, watch1, watch2, isFullYear: fullYear, watchStateGroups, isEmptyBid
+  } = opts;
+
+  const wb = new ExcelJS.Workbook();
+  const nameField = `${nameWithRank}  #${serial}`;
+
+  // Keep sheet names unique and Excel-legal (<=31 chars, no : \ / ? * [ ]).
+  const used = new Set();
+  const uniqueName = (base) => {
+    let nm = base.replace(/[:\\/?*\[\]]/g, '-').slice(0, 31);
+    let n = 2;
+    while (used.has(nm)) { const suf = ` (${n++})`; nm = (base.slice(0, 31 - suf.length) + suf); }
+    used.add(nm);
+    return nm;
+  };
+
+  const datesOf = (slotIdx) => rdoSlots[slotIdx].days.map(d => d.date);
+
+  // ---- Watch Bid sheet(s): one DP per row ----
+  if (hasWatchBid || isEmptyBid) {
+    if (fullYear) {
+      // One watch sheet per quarter group: DPs 1-3, 4-6, 7-9, 10-13.
+      [[1, 3], [4, 6], [7, 9], [10, 13]].forEach((range, gi) => {
+        const [first, last] = range;
+        const idxs = dps.map((d, i) => i).filter(i => dps[i].dp >= first && dps[i].dp <= last);
+        if (idxs.length === 0) return;
+        const g = watchStateGroups[gi] || {};
+        const c1 = g.c1 != null ? `Watch ${g.c1}` : '';
+        const c2 = g.c2 != null ? `Watch ${g.c2}` : '';
+        const ws = wb.addWorksheet(uniqueName(`Watch ${first}-${last}`));
+        applyApd086Template(ws);
+        fillApd086Sheet(ws, {
+          name: nameField, watch: curWatch,
+          dp: `${dps[idxs[0]].dp}-${dps[idxs[idxs.length - 1]].dp}`,
+          startDate: dps[idxs[0]].start, endDate: dps[idxs[idxs.length - 1]].end
+        }, c1, c2, idxs.map(i => ({ dates: datesOf(i) })));
+      });
+    } else {
+      const ws = wb.addWorksheet(uniqueName('Watch Bid'));
+      applyApd086Template(ws);
+      fillApd086Sheet(ws, {
+        name: nameField, watch: curWatch,
+        dp: dps.length > 1 ? `${dps[0].dp}-${dps[dps.length - 1].dp}` : String(dps[0].dp),
+        startDate: dps[0].start, endDate: dps[dps.length - 1].end
+      }, watch1, watch2, dps.map((d, i) => ({ dates: datesOf(i) })));
+    }
+  }
+
+  // ---- Per-DP RDO sheets ----
+  const dpIdxs = isEmptyBid ? dps.map((_, i) => i) : includedDPs;
+  dpIdxs.forEach(slotIdx => {
+    const slot = rdoSlots[slotIdx];
+    const info = dps[slotIdx];
+    const dates = slot.days.map(d => d.date);
+    const first = slot.days.map(d => statePdfSym(d.state1));
+    const has2 = slot.days.some(d => d.state2 !== 'work');
+    const second = has2 ? slot.days.map(d => statePdfSym(d.state2)) : slot.days.map(() => '');
+    const ws = wb.addWorksheet(uniqueName(`DP ${info.dp}`));
+    applyApd086Template(ws);
+    fillApd086Sheet(ws, {
+      name: nameField, watch: curWatch, dp: String(info.dp),
+      startDate: info.start, endDate: info.end
+    }, '', '', [{ dates }, { marks: first }, { marks: second }]);
+  });
+
+  return wb;
+}
+
+// Trigger a browser download of a Blob.
+function downloadBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+}
+
+// Write the workbook and download it as an .xlsx file.
+async function downloadWorkbook(wb, name) {
+  const buf = await wb.xlsx.writeBuffer();
+  downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), name);
+}
+// =================== END DUAL OUTPUT: EXCEL (APD-086) ===================
+
+
 // ----------------- COMBINED APD-086 PDF -----------------
 // One portrait page with 4 stacked APD-086 forms:
 //   1) Watch BID (3-DP combined, 1st/2nd watch choice in top boxes)
@@ -2939,6 +3115,12 @@ function generateCombinedPDF() {
   );
   if (anyDPHasManyVC) recipients.push('pssannualvacation@lawa.org');
 
+  // Build the Excel companion workbook from the same data used for the PDF.
+  const bidWorkbook = buildBidWorkbook({
+    nameWithRank, serial, curWatch, dps, rdoSlots, includedDPs,
+    hasWatchBid, watch1, watch2, isFullYear: isFullYear(), watchStateGroups, isEmptyBid
+  });
+
   // ---- Pass 2: fixed-position layout. Each slip's Y is determined by its
   // pageSlotIdx according to the schedule pageTopY + pageSlotIdx * SLOT_PITCH.
   // This means removing or omitting slips does NOT reflow the others — slot 1's
@@ -3083,8 +3265,9 @@ function generateCombinedPDF() {
       const allThreeEarly = dps.map(d => ({ dp: d.dp, year: d.year }));
       earlyFilename = `${namePart}, BLANK Bids for ${dpPrefix(allThreeEarly)} ${formatDPGroups(allThreeEarly)}.pdf`;
     }
-    doc.save(earlyFilename);
-    toast('PDF generated (no bid data)');
+    downloadBlob(doc.output('blob'), earlyFilename);
+    downloadWorkbook(bidWorkbook, earlyFilename.replace(/\.pdf$/, '.xlsx'));
+    toast('PDF + Excel generated (no bid data)');
     return;
   }
 
@@ -3108,18 +3291,21 @@ function generateCombinedPDF() {
 
   const body = `Submitting my Watch / Days-Off Bid for the period DP ${dps[0].dp}–${dps[dps.length - 1].dp} (${fmtMDDYYYY(dps[0].start)} – ${fmtMDDYYYY(dps[dps.length - 1].end)}).\n\nForm attached.`;
 
-  shareOrFallbackPDF(doc, filename, recipients, subject, body);
+  const xlsxName = filename.replace(/\.pdf$/, '.xlsx');
+  shareOrFallbackPDF(doc, filename, recipients, subject, body, bidWorkbook, xlsxName);
 }
 
 // Email handoff strategy:
-//   • Mobile (Web Share API with file support) → share sheet with PDF attached;
-//     recipient is passed via `text` field. If the user cancels, we still open mailto
-//     so they get the recipient pre-filled in the To: field.
-//   • Desktop (no file-share support) → just download the PDF locally. No mailto,
-//     no email prep — the officer attaches and addresses manually from their mail app.
-async function shareOrFallbackPDF(doc, filename, recipients, subject, body) {
-  const blob = doc.output('blob');
-  const file = new File([blob], filename, { type: 'application/pdf' });
+//   • Mobile → Web Share API attaches BOTH the PDF and Excel to the share sheet; the
+//     officer picks their mail app and the files come along. Web Share can't set the
+//     recipient, so the To: address rides in the share text. If file-sharing is
+//     unavailable, both files are downloaded and a pre-addressed mailto is opened so
+//     they can be attached manually (mailto alone cannot carry attachments).
+//   • Desktop → download the PDF first (within the click gesture), then the Excel.
+//     The officer attaches and addresses the email from their mail app.
+async function shareOrFallbackPDF(doc, filename, recipients, subject, body, workbook, xlsxName) {
+  const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  const pdfBlob = doc.output('blob');
 
   // Detect if we're on an actual mobile device. Web Share API on desktop browsers
   // (Chrome on Windows in particular) reports support but routes through OS share
@@ -3127,32 +3313,58 @@ async function shareOrFallbackPDF(doc, filename, recipients, subject, body) {
   // to mail clients. Restricting to true mobile UAs avoids this.
   const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
-  if (isMobile && navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({
-        files: [file],
-        title: subject,
-        text: `To: ${recipients.join(', ')}\n\n${body}`
-      });
-      toast('PDF ready to send');
-      return;
-    } catch (err) {
-      // User cancelled the share sheet OR an error — fall through to mailto so they
-      // still get the recipient pre-filled in To:.
-      const mailto = `mailto:${encodeURIComponent(recipients.join(','))}` +
-        `?subject=${encodeURIComponent(subject)}` +
-        `&body=${encodeURIComponent(body + `\n\n(Please attach the downloaded ${filename})`)}`;
-      window.location.href = mailto;
-      setTimeout(() => { doc.save(filename); }, 200);
-      toast('PDF downloading — attach it to the email');
-      return;
+  // MOBILE: attach BOTH files to an email via the OS share sheet. mailto: cannot
+  // carry attachments, so the Web Share API is the only way to attach files from a
+  // web page. It can't pre-fill the recipient, so the To: address rides in the share
+  // text (and a mailto fallback surfaces it if file-sharing isn't available).
+  if (isMobile) {
+    const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
+    let xfile = null;
+    if (workbook && xlsxName) {
+      const xbuf = await workbook.xlsx.writeBuffer();
+      xfile = new File([xbuf], xlsxName, { type: XLSX_MIME });
     }
+    const shareFiles = xfile ? [pdfFile, xfile] : [pdfFile];
+    const shareData = {
+      files: shareFiles,
+      title: subject,
+      text: `To: ${recipients.join(', ')}\n\n${body}`
+    };
+
+    // Attempt the file share whenever the browser exposes it. canShare can be
+    // conservative, so only skip it when it explicitly rejects these files.
+    if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) {
+      try {
+        await navigator.share(shareData);
+        toast(`Choose your email app — ${xfile ? 'both files' : 'the PDF'} attached`);
+        return;
+      } catch (err) {
+        // Explicit cancel: stop quietly. Any other error → fall through to download.
+        if (err && err.name === 'AbortError') { toast('Send cancelled'); return; }
+      }
+    }
+
+    // Web Share unavailable or failed → download both files, then open a
+    // pre-addressed email so the officer can attach them manually.
+    downloadBlob(pdfBlob, filename);
+    if (xfile) downloadBlob(xfile, xlsxName);
+    const mailto = `mailto:${encodeURIComponent(recipients.join(','))}` +
+      `?subject=${encodeURIComponent(subject)}` +
+      `&body=${encodeURIComponent(body + `\n\nAttach the downloaded files: ${filename}${xfile ? ' and ' + xlsxName : ''}`)}`;
+    setTimeout(() => { window.location.href = mailto; }, 500);
+    toast('Files downloaded — attach them to the email');
+    return;
   }
 
-  // Desktop (or any non-mobile context) → just download the PDF. The officer handles
-  // emailing themselves.
-  doc.save(filename);
-  toast('PDF downloaded');
+  // DESKTOP: download the PDF FIRST (still inside the click's user gesture), then
+  // build and download the Excel. Saving the PDF before the await avoids the
+  // browser dropping it once the gesture is consumed by writeBuffer().
+  downloadBlob(pdfBlob, filename);
+  if (workbook && xlsxName) {
+    const xbuf = await workbook.xlsx.writeBuffer();
+    downloadBlob(new Blob([xbuf], { type: XLSX_MIME }), xlsxName);
+  }
+  toast('PDF + Excel downloaded');
 }
 
 function generateWatchPDF() { generateCombinedPDF(); }
