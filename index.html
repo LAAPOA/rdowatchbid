@@ -3384,7 +3384,45 @@ function generateCombinedPDF() {
   const filename = `${namePart}, ${bidPart}.pdf`;
   const subject = `${namePart}, ${bidPart}`;
 
-  const body = `Submitting my Watch / Days-Off Bid for the period DP ${dps[0].dp}–${dps[dps.length - 1].dp} (${fmtMDDYYYY(dps[0].start)} – ${fmtMDDYYYY(dps[dps.length - 1].end)}).\n\nForm attached.`;
+  // Email body — phrasing depends on whether the bid carries a watch-assignment
+  // request, Days-Off (RDO) selections, or both. Dates are zero-padded MM/DD/YYYY.
+  const fmtMDY = (d) => {
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${mm}/${dd}/${d.getFullYear()}`;
+  };
+  const rangeOf = (info) => `(${fmtMDY(info.start)} - ${fmtMDY(info.end)})`;
+  // DP-number list with a word "and" before the last: "7" | "7 and 8" | "7, 8 and 9"
+  const joinAnd = (a) => a.length <= 1 ? String(a[0] ?? '')
+    : a.length === 2 ? `${a[0]} and ${a[1]}`
+    : `${a.slice(0, -1).join(', ')} and ${a[a.length - 1]}`;
+
+  // DP info objects (dp, year, start, end) for the DPs that carry RDO selections.
+  const rdoInfos = [];
+  rdoSlots.forEach((slot, idx) => {
+    if (slot.days.some(d => d.state1 !== 'work' || d.state2 !== 'work')) rdoInfos.push(dps[idx]);
+  });
+
+  // "Days-Off request for DP 7 (…)"  |  "…for the next 2 DPs 7 and 8 (…), (…)"
+  const daysOffClause = (infos) => infos.length === 1
+    ? `Days-Off request for DP ${infos[0].dp} ${rangeOf(infos[0])}`
+    : `Days-Off request for the next ${infos.length} DPs ${joinAnd(infos.map(i => i.dp))} ` +
+      infos.map(rangeOf).join(', ');
+
+  // "watch assignment Bid for DPs 7, 8, 9 for the dates (start - end)[, all-encompassed]"
+  const watchClause = (allEncompassed) =>
+    `watch assignment Bid for DPs ${dps.map(d => d.dp).join(', ')} for the dates ` +
+    `(${fmtMDY(dps[0].start)} - ${fmtMDY(dps[dps.length - 1].end)})` +
+    (allEncompassed ? ', all-encompassed' : '');
+
+  let body;
+  if (hasWatchBid && hasAnyRDO) {
+    body = `Please see my ${watchClause(false)}, and my ${daysOffClause(rdoInfos)}`;
+  } else if (hasWatchBid) {
+    body = `Please see my ${watchClause(true)}`;
+  } else {
+    body = `Please see my ${daysOffClause(rdoInfos)}`;
+  }
 
   const csvName = filename.replace(/\.pdf$/, '.csv');
   shareOrFallbackPDF(doc, filename, recipients, subject, body, bidCsv, csvName);
