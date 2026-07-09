@@ -1634,6 +1634,11 @@ const DUE_FMT_DATE = new Intl.DateTimeFormat('en-US', {
   timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric', year: 'numeric'
 });
 function dueDateOnly(due) { return DUE_FMT_DATE.format(due); }
+// Compact day+date for the upcoming countdown, e.g. "Tue, Jul 28 · 6 PM PT".
+const DUE_FMT_DAY = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Los_Angeles', weekday: 'short', month: 'short', day: 'numeric'
+});
+function dueDayCompact(due) { return `${DUE_FMT_DAY.format(due)} · 6 PM PT`; }
 
 // Render a due-counter element for a given due instant relative to `now` (ms).
 //  • upcoming        → D/H/M/S countdown
@@ -1652,7 +1657,8 @@ function renderCounter(el, dueMs, now, opts) {
           m = Math.floor((s % 3600) / 60), sec = s % 60;
     el.classList.add('state-upcoming');
     el.innerHTML = `<div class="dc-line">${tag}Bid due in</div>` +
-      `<div class="dc-nums">${seg(d, 'd')}${seg(h, 'h')}${seg(m, 'm')}${seg(sec, 's')}</div>`;
+      `<div class="dc-nums">${seg(d, 'd')}${seg(h, 'h')}${seg(m, 'm')}${seg(sec, 's')}</div>` +
+      `<div class="dc-sub">${dueDayCompact(new Date(dueMs))}</div>`;
   } else {
     const elapsed = now - dueMs;
     if (elapsed < 86400000) {
