@@ -100,6 +100,123 @@
     font-weight: 500;
   }
 
+  /* ===== PER-DP VIEW SLIDER (3-position, iPhone-style) + due counter ===== */
+  /* Column layout: three 2-line labels above their positions, a bare round
+     track with a sliding knob, and the active choice's RDO count below. */
+  .view-slider {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    width: 216px;
+    flex: 0 0 auto;
+    user-select: none;
+  }
+  .view-slider .vs-labels { display: grid; grid-template-columns: 1fr 1fr 1fr; }
+  .view-slider .vs-opt {
+    appearance: none; background: none; border: none; cursor: pointer;
+    font-family: 'Oswald', sans-serif;
+    font-size: 10.5px; font-weight: 600; line-height: 1.04;
+    letter-spacing: 0.03em; text-transform: uppercase;
+    color: rgba(245,242,235,0.5);
+    padding: 0 2px; text-align: center;
+    transition: color 0.2s;
+  }
+  .view-slider .vs-opt sup { font-size: 0.6em; }
+  .view-slider .vs-opt:hover { color: var(--paper); }
+  .view-slider[data-pos="1"]    .vs-opt[data-pos="1"],
+  .view-slider[data-pos="both"] .vs-opt[data-pos="both"],
+  .view-slider[data-pos="2"]    .vs-opt[data-pos="2"] { color: var(--gold-bright); }
+
+  .view-slider .vs-track {
+    position: relative;
+    height: 26px;
+    width: 80%;              /* track pattern reduced 20%, centered under labels */
+    margin: 0 auto;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.14);
+    border: 1.5px solid var(--gold-bright);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+    cursor: pointer;
+    touch-action: none;       /* finger drags move the knob, not the page */
+  }
+  /* Invisible padding enlarges the touch target without changing the look. */
+  .view-slider .vs-track::before {
+    content: ''; position: absolute; inset: -8px; border-radius: 999px;
+  }
+  .view-slider .vs-knob {
+    position: absolute;
+    top: 2px; width: 20px; height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+    box-shadow: 0 2px 5px rgba(0,0,0,0.45);
+    transition: left 0.28s cubic-bezier(.4,1.3,.5,1);
+    pointer-events: none;      /* the track owns all pointer input */
+  }
+  .view-slider.dragging .vs-knob { transition: none; }
+  .view-slider[data-pos="1"]    .vs-knob { left: 3px; }
+  .view-slider[data-pos="both"] .vs-knob { left: calc(50% - 10px); }
+  .view-slider[data-pos="2"]    .vs-knob { left: calc(100% - 23px); }
+
+  /* Per-choice RDO counters: under the track, aligned to their positions.
+     Always visible; nothing under Mixed View (center cell stays empty). */
+  .view-slider .vs-counts {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    font-family: 'Oswald', sans-serif; text-align: center;
+    color: var(--paper); font-size: 12.5px; font-weight: 700; line-height: 1;
+  }
+  .view-slider .vs-counts .d { opacity: 0.5; font-size: 0.75em; font-weight: 600; }
+  .view-slider .vs-cnt.ok { color: #8fe3a0; }
+  .view-slider .vs-cnt.warn { color: var(--gold-bright); }
+
+  /* Shared due-date counter */
+  .due-counter { display: flex; flex-direction: column; justify-content: center; line-height: 1.15; }
+  .due-counter .dc-line {
+    font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    font-weight: 600; color: var(--gold-bright);
+  }
+  .due-counter .dc-nums {
+    font-family: 'Oswald', sans-serif; font-variant-numeric: tabular-nums;
+    font-weight: 600; letter-spacing: 0.02em;
+  }
+  .due-counter .dc-nums b { font-weight: 700; }
+  .due-counter .dc-nums .u { opacity: 0.6; font-size: 0.62em; font-weight: 600; margin: 0 4px 0 1px; }
+  .due-counter .dc-sub { font-size: 11px; opacity: 0.9; }
+
+  /* Per-slot header layout: slider, then due counter, MOU chip, Apply pinned right */
+  .rdo-slot-head .slot-head-stats {
+    display: flex; align-items: center; gap: 14px; margin-left: 4px; flex-wrap: wrap;
+  }
+
+  /* Left column: DP badge with its countdown pinned directly below, equal width */
+  .rdo-slot-head .slot-id-col {
+    display: flex; flex-direction: column; gap: 5px;
+    width: 152px; flex: 0 0 auto; margin-right: 4px;
+  }
+  .rdo-slot-head .slot-id-col .slot-label {
+    width: 100%; min-width: 0; margin-right: 0; box-sizing: border-box;
+  }
+
+  .slot-due {
+    width: 100%; box-sizing: border-box;
+    padding: 4px 8px;
+    /* Matches the weekend-day theme on the calendar: cream fill, ink text. */
+    background: var(--weekend);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    align-items: center; text-align: center;
+  }
+  .slot-due .dc-line { color: var(--ink-soft); font-size: 8.5px; letter-spacing: 0.1em; }
+  .slot-due .dc-nums { font-size: 12px; color: var(--ink); }
+  .slot-due .dc-nums .u { margin: 0 3px 0 1px; color: var(--ink-soft); }
+  .slot-due .dc-sub { font-size: 10px; color: var(--ink); }
+  .slot-due.state-overdue .dc-line { color: var(--vac); }
+  .slot-due.state-past .dc-line { color: var(--ink-soft); }
+
+  @media (max-width: 560px) {
+    .view-slider { width: 100%; }
+  }
+
   /* ===== MASTER PICKER ===== */
   .picker {
     background: white;
@@ -406,11 +523,11 @@
     font-size: 13px;
     font-weight: 600;
     opacity: 0.85;
-    /* Distribute the 4 year digits across the full badge width using
-       text-align: justify with each character treated as a word via
-       wbr-like spacing. The JS sets the appropriate letter-spacing. */
+    /* Year digits sit centered with a modest gap rather than being spread
+       across the full badge width. */
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
+    gap: 5px;
     width: 100%;
     padding: 0 1px;
     box-sizing: border-box;
@@ -432,10 +549,9 @@
     margin-left: 4px;
   }
   .rdo-slot-head .header-mou-chip {
-    /* Pushed toward the right side; sits 15px left of the Apply button (or
-       against the right edge if Apply is omitted on the last slot). */
+    /* Sits just left of the Apply button, which is pinned to the far right. */
     margin-left: auto;
-    margin-right: 15px;
+    margin-right: 4px;
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -1479,6 +1595,91 @@ function getDPInfo(dpNum, year) {
   };
 }
 
+/* ============================================================
+   DUE DATES + LIVE COUNTERS
+   A DP's bid is due 26 days before that DP starts, at 6:00 PM Pacific.
+   That anchors DP 8 / 2026 to Jun 30 2026 6:00 PM PT, and — because DP
+   starts are 28 days apart — every DP's due date lands exactly 28 days
+   from the next, always at 6:00 PM Pacific (DST handled below).
+   ============================================================ */
+const DUE_OFFSET_DAYS = 26; // due date = DP start − 26 days
+const DUE_HOUR_PT = 18;     // 6:00 PM Pacific
+
+// LA wall-clock offset (ms) at a given instant: e.g. −7h (PDT) or −8h (PST).
+function laOffsetMs(instant) {
+  const laStr = new Date(instant).toLocaleString('en-US', { timeZone: 'America/Los_Angeles' });
+  return new Date(laStr).getTime() - instant;
+}
+// The instant whose Los Angeles wall clock is 6:00 PM on calendar date y-m-d.
+function pacific6pm(y, m1to12, d) {
+  const guess = Date.UTC(y, m1to12 - 1, d, DUE_HOUR_PT, 0, 0); // treat 18:00 as UTC
+  return new Date(guess - laOffsetMs(guess)); // shift by LA offset → 18:00 PT
+}
+// Due-date Date object for a DP info ({ start } from getDPInfo).
+function dueDateFor(info) {
+  const d = new Date(info.start);
+  d.setDate(d.getDate() - DUE_OFFSET_DAYS);
+  return pacific6pm(d.getFullYear(), d.getMonth() + 1, d.getDate());
+}
+
+const pad2 = (n) => String(n).padStart(2, '0');
+const DUE_FMT = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric', year: 'numeric',
+  hour: 'numeric', minute: '2-digit'
+});
+// Human-readable due datetime in Pacific, e.g. "Jun 30, 2026, 6:00 PM".
+function dueDateLabel(due) { return DUE_FMT.format(due) + ' PT'; }
+// Date only, no time, Pacific — e.g. "Jun 30, 2026".
+const DUE_FMT_DATE = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric', year: 'numeric'
+});
+function dueDateOnly(due) { return DUE_FMT_DATE.format(due); }
+
+// Render a due-counter element for a given due instant relative to `now` (ms).
+//  • upcoming        → D/H/M/S countdown
+//  • past < 24h      → H/M/S count-up ("overdue")
+//  • past ≥ 24h      → "N days ago" + the actual due date
+function renderCounter(el, dueMs, now, opts) {
+  opts = opts || {};
+  const tag = ''; // counter lives inside its own DP slot — no prefix needed
+  el.classList.remove('state-upcoming', 'state-overdue', 'state-past');
+  const diff = dueMs - now;
+  const seg = (n, u) => `<b>${pad2(n)}</b><span class="u">${u}</span>`;
+
+  if (diff > 0) {
+    const s = Math.floor(diff / 1000);
+    const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600),
+          m = Math.floor((s % 3600) / 60), sec = s % 60;
+    el.classList.add('state-upcoming');
+    el.innerHTML = `<div class="dc-line">${tag}Bid due in</div>` +
+      `<div class="dc-nums">${seg(d, 'd')}${seg(h, 'h')}${seg(m, 'm')}${seg(sec, 's')}</div>`;
+  } else {
+    const elapsed = now - dueMs;
+    if (elapsed < 86400000) {
+      // First 24 hours after the deadline: live count-up clock (H/M/S).
+      const s = Math.floor(elapsed / 1000);
+      const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+      el.classList.add('state-overdue');
+      el.innerHTML = `<div class="dc-line">${tag}Overdue</div>` +
+        `<div class="dc-nums">${seg(h, 'h')}${seg(m, 'm')}${seg(sec, 's')}</div>`;
+    } else {
+      // After 24 hours: days passed + the date only (no time).
+      const daysAgo = Math.floor(elapsed / 86400000);
+      el.classList.add('state-past');
+      el.innerHTML = `<div class="dc-line">${tag}Bid was due</div>` +
+        `<div class="dc-sub">${daysAgo} day${daysAgo === 1 ? '' : 's'} ago · ${dueDateOnly(new Date(dueMs))}</div>`;
+    }
+  }
+}
+
+// One global ticker updates each DP's own counter every second.
+function tickCounters() {
+  const now = Date.now();
+  document.querySelectorAll('.slot-due[data-due]').forEach(el => {
+    renderCounter(el, +el.dataset.due, now, { dp: +el.dataset.dp });
+  });
+}
+
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 function fmtDate(d) {
@@ -1625,6 +1826,7 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
     } else {
       watchForm.classList.add('hidden');
       rdoForm.classList.remove('hidden');
+      tickCounters();
     }
   });
 });
@@ -2033,6 +2235,7 @@ function buildAllSlots() {
   for (let s = 0; s < n; s++) {
     rdoSlotsEl.appendChild(buildSlotPanel(s));
   }
+  if (typeof tickCounters === 'function') tickCounters();
 }
 
 function buildSlotPanel(slotIdx) {
@@ -2059,16 +2262,27 @@ function buildSlotPanel(slotIdx) {
   slotEl.dataset.slot = slotIdx;
   slotEl.innerHTML = `
     <div class="rdo-slot-head">
-      <span class="slot-label">
-        <span class="slot-dp-num">DP ${info.dp}</span>
-        <span class="slot-dp-year">${String(info.year).split('').map(c => `<span>${c}</span>`).join('')}</span>
-      </span>
-      <div class="stat stat-view-toggle" title="Click to cycle through RDO views">
-        <div class="toggle-current">
-          <div class="toggle-label"></div>
-          <div class="toggle-count"></div>
+      <div class="slot-id-col">
+        <span class="slot-label">
+          <span class="slot-dp-num">DP ${info.dp}</span>
+          <span class="slot-dp-year">${String(info.year).split('').map(c => `<span>${c}</span>`).join('')}</span>
+        </span>
+        <div class="due-counter slot-due" data-due="${dueDateFor(info).getTime()}" data-dp="${info.dp}" aria-live="off"></div>
+      </div>
+      <div class="slot-head-stats">
+        <div class="view-slider slot-slider" data-pos="${slot.view}" role="radiogroup" aria-label="Choice view for DP ${info.dp}">
+          <div class="vs-labels">
+            <button type="button" class="vs-opt" data-pos="1" role="radio">1<sup>st</sup><br>Choice</button>
+            <button type="button" class="vs-opt" data-pos="both" role="radio">Mixed<br>View</button>
+            <button type="button" class="vs-opt" data-pos="2" role="radio">2<sup>nd</sup><br>Choice</button>
+          </div>
+          <div class="vs-track" aria-hidden="true"><div class="vs-knob"></div></div>
+          <div class="vs-counts" aria-live="polite">
+            <span class="vs-cnt" data-c="1"></span>
+            <span></span>
+            <span class="vs-cnt" data-c="2"></span>
+          </div>
         </div>
-        <div class="toggle-hint"></div>
       </div>
       <div class="header-mou-chip" title="MOU 30/39 Paid Holiday — denoted by $ on calendar"><span class="swatch holiday">$</span><span class="mou-text">MOU 30/39<br>Paid Holiday</span></div>
       ${isLastSlot
@@ -2088,23 +2302,67 @@ function buildSlotPanel(slotIdx) {
     </div>
   `;
 
-  // Wire RDO counters as view targets.
-  // Single stat toggle: clicking cycles 1st → 2nd → both → 1st. The label text and
-  // class change with each click. The label says: "X/12 RDO (1st)" / "X/12 RDO (2nd)" /
-  // "X/12 + Y/12 RDO (Both)" depending on the current view.
-  const toggleEl = slotEl.querySelector('.stat-view-toggle');
-  if (toggleEl) {
-    toggleEl.addEventListener('click', () => {
-      const cur = slot.view;
-      const next = cur === '1' ? '2' : cur === '2' ? 'both' : '1';
-      slot.view = next;
+  // Per-DP view slider: each slot controls its own 1st / Mixed / 2nd view.
+  // Three input methods: tap a label, click/tap anywhere on the track, or
+  // drag the knob (pointer events cover both mouse and touch).
+  const slider = slotEl.querySelector('.slot-slider');
+  if (slider) {
+    const track = slider.querySelector('.vs-track');
+    const knob = slider.querySelector('.vs-knob');
+
+    const commitView = (view) => {
+      slot.view = view;                 // '1' | 'both' | '2'
+      slider.dataset.pos = view;
       updateStats(slotIdx);
       applyViewClass(slotIdx);
+    };
+
+    slider.querySelectorAll('.vs-opt').forEach(opt => {
+      opt.addEventListener('click', () => commitView(opt.dataset.pos));
+    });
+
+    // Map a pointer X to the nearest of the three stops.
+    const stopFor = (clientX) => {
+      const r = track.getBoundingClientRect();
+      const f = Math.min(1, Math.max(0, (clientX - r.left) / r.width));
+      return f < 1 / 3 ? '1' : f < 2 / 3 ? 'both' : '2';
+    };
+
+    let dragging = false;
+    track.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      track.setPointerCapture(e.pointerId);
+      slider.classList.add('dragging');
+      // Knob follows the pointer immediately (also handles a plain click).
+      const r = track.getBoundingClientRect();
+      const x = Math.min(r.width - 23, Math.max(3, e.clientX - r.left - 10));
+      knob.style.left = x + 'px';
+      e.preventDefault();
+    });
+    track.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const r = track.getBoundingClientRect();
+      const x = Math.min(r.width - 23, Math.max(3, e.clientX - r.left - 10));
+      knob.style.left = x + 'px';
+    });
+    const release = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      slider.classList.remove('dragging');
+      knob.style.left = '';               // hand position back to CSS
+      commitView(stopFor(e.clientX));     // snap to nearest stop
+    };
+    track.addEventListener('pointerup', release);
+    track.addEventListener('pointercancel', (e) => {
+      // Drag interrupted (e.g. system gesture): snap back to the current view.
+      dragging = false;
+      slider.classList.remove('dragging');
+      knob.style.left = '';
     });
   }
 
-  // Initial paint
-  setTimeout(() => updateStats(slotIdx), 0);
+  // Initial paint of the count badge and the due counter.
+  setTimeout(() => { updateStats(slotIdx); tickCounters(); }, 0);
 
   // Build day cells
   const calendar = slotEl.querySelector('.calendar');
@@ -2387,51 +2645,22 @@ function updateStats(slotIdx) {
   const days = slot.days;
   const o1 = days.filter(d => d.state1 === 'rdo').length;
   const o2 = days.filter(d => d.state2 === 'rdo').length;
-  const view = slot.view;
 
-  const toggle = slotEl.querySelector('.stat-view-toggle');
-  if (!toggle) return;
-  const labelEl = toggle.querySelector('.toggle-label');
-  const countEl = toggle.querySelector('.toggle-count');
-  const hintEl = toggle.querySelector('.toggle-hint');
+  const sliderEl = slotEl.querySelector('.slot-slider');
+  if (!sliderEl) return;
+  const cnt1 = sliderEl.querySelector('.vs-cnt[data-c="1"]');
+  const cnt2 = sliderEl.querySelector('.vs-cnt[data-c="2"]');
+  if (!cnt1 || !cnt2) return;
 
-  // Style accents reflect the active view.
-  toggle.classList.remove('warn', 'ok', 'view-1', 'view-2', 'view-both');
-
-  // The "Choice" word always appears as a 2-line block: ordinal on top, "Choice"
-  // below, both centered. Renders as an inline-block so it can sit inline with
-  // surrounding text (e.g. "Click for [block]" or "X of 12 RDOs selected [block]")
-  // and still occupy 2 lines.
-  const block1 = '<span class="choice-block">1<sup>st</sup><br>Choice</span>';
-  const block2 = '<span class="choice-block">2<sup>nd</sup><br>Choice</span>';
-  const blockBoth = '<span class="choice-block">1<sup>st</sup> &amp; 2<sup>nd</sup><br>Choice</span>';
-
-  if (view === '1') {
-    labelEl.innerHTML = block1;
-    countEl.innerHTML = `${o1} of 12 RDOs selected`;
-    hintEl.innerHTML = `Click for ${block2}`;
-    toggle.classList.add('view-1');
-    toggle.classList.toggle('warn', o1 !== 0 && o1 !== 12);
-    toggle.classList.toggle('ok', o1 === 12);
-  } else if (view === '2') {
-    labelEl.innerHTML = block2;
-    countEl.innerHTML = `${o2} of 12 RDOs selected`;
-    hintEl.innerHTML = `Click for ${blockBoth}`;
-    toggle.classList.add('view-2');
-    toggle.classList.toggle('warn', o2 !== 0 && o2 !== 12);
-    toggle.classList.toggle('ok', o2 === 12);
-  } else {
-    labelEl.innerHTML = blockBoth;
-    countEl.innerHTML =
-      `${o1} of 12 RDOs (1<sup>st</sup>)<br>` +
-      `${o2} of 12 RDOs (2<sup>nd</sup>)`;
-    hintEl.innerHTML = `Click for ${block1}`;
-    toggle.classList.add('view-both');
-    const allOk = o1 === 12 && o2 === 12;
-    const anyWarn = (o1 !== 0 && o1 !== 12) || (o2 !== 0 && o2 !== 12);
-    toggle.classList.toggle('ok', allOk);
-    toggle.classList.toggle('warn', anyWarn);
-  }
+  // Both counters stay visible regardless of the selected view; each colors
+  // independently (green when complete at 12, gold while mid-selection).
+  const paint = (el, n) => {
+    el.innerHTML = `<b>${n}</b><span class="d">/12</span>`;
+    el.classList.toggle('ok', n === 12);
+    el.classList.toggle('warn', n !== 0 && n !== 12);
+  };
+  paint(cnt1, o1);
+  paint(cnt2, o2);
 
   // Apply-to-all gating: only allow the button when this slot's RDO counts are
   // in a "valid" state — exactly 0 or 12 in each of 1st/2nd choice. Anything in
@@ -2458,6 +2687,12 @@ function resetRDO() {
 }
 
 buildAllSlots();
+
+/* ============================================================
+   DUE-DATE TICKER — updates every DP's own counter each second
+   ============================================================ */
+tickCounters();
+setInterval(tickCounters, 1000);
 
 /* ============================================================
    PERSIST OFFICER INFO ACROSS SESSIONS
@@ -3210,11 +3445,13 @@ function generateCombinedPDF() {
   );
   if (anyDPHasManyVC) recipients.push('pssannualvacation@lawa.org');
 
-  // Build the CSV companion from the same data used for the PDF.
-  const bidCsv = buildBidCSV({
+  // Build the CSV companion only when the bid actually contains RDO selections.
+  // A watch-only bid ships as PDF alone — the CSV grid carries the 28-day
+  // day-off marks, which a watch bid doesn't have.
+  const bidCsv = hasAnyRDO ? buildBidCSV({
     nameWithRank, serial, curWatch, dps, rdoSlots, includedDPs,
     hasWatchBid, watch1, watch2, isFullYear: isFullYear(), watchStateGroups, isEmptyBid
-  });
+  }) : null;
 
   // ---- Pass 2: fixed-position layout. Each slip's Y is determined by its
   // pageSlotIdx according to the schedule pageTopY + pageSlotIdx * SLOT_PITCH.
@@ -3361,8 +3598,7 @@ function generateCombinedPDF() {
       earlyFilename = `${namePart}, BLANK Bids for ${dpPrefix(allThreeEarly)} ${formatDPGroups(allThreeEarly)}.pdf`;
     }
     downloadBlob(doc.output('blob'), earlyFilename);
-    downloadBlob(new Blob([bidCsv], { type: 'text/csv' }), earlyFilename.replace(/\.pdf$/, '.csv'));
-    toast('PDF + CSV generated (no bid data)');
+    toast('Blank bid PDF generated (no bid data)');
     return;
   }
 
@@ -3504,7 +3740,7 @@ async function shareOrFallbackPDF(doc, filename, recipients, subject, body, csvT
   if (csvText && csvName) {
     downloadBlob(new Blob([csvText], { type: CSV_MIME }), csvName);
   }
-  toast('PDF + CSV downloaded');
+  toast(csvText && csvName ? 'PDF + CSV downloaded' : 'PDF downloaded');
 }
 
 function generateWatchPDF() { generateCombinedPDF(); }
