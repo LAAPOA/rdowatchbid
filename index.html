@@ -1604,6 +1604,11 @@ function getDPInfo(dpNum, year) {
    ============================================================ */
 const DUE_OFFSET_DAYS = 26; // due date = DP start − 26 days
 const DUE_HOUR_PT = 18;     // 6:00 PM Pacific
+// The bid-period selector auto-advances to the NEXT period once we're within
+// this many days of that period's bid due date (the deadline that falls inside
+// the current timeframe). due = next period start − 26 days @ 6 PM PT, so the
+// flip happens at (next start − 41 days).
+const AUTO_ADVANCE_DAYS = 15;
 
 // LA wall-clock offset (ms) at a given instant: e.g. −7h (PDT) or −8h (PST).
 function laOffsetMs(instant) {
@@ -1634,11 +1639,6 @@ const DUE_FMT_DATE = new Intl.DateTimeFormat('en-US', {
   timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric', year: 'numeric'
 });
 function dueDateOnly(due) { return DUE_FMT_DATE.format(due); }
-// Compact day+date for the upcoming countdown, e.g. "Tue, Jul 28 · 6 PM PT".
-const DUE_FMT_DAY = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/Los_Angeles', weekday: 'short', month: 'short', day: 'numeric'
-});
-function dueDayCompact(due) { return `${DUE_FMT_DAY.format(due)} · 6 PM PT`; }
 
 // Render a due-counter element for a given due instant relative to `now` (ms).
 //  • upcoming        → D/H/M/S countdown
@@ -1657,8 +1657,7 @@ function renderCounter(el, dueMs, now, opts) {
           m = Math.floor((s % 3600) / 60), sec = s % 60;
     el.classList.add('state-upcoming');
     el.innerHTML = `<div class="dc-line">${tag}Bid due in</div>` +
-      `<div class="dc-nums">${seg(d, 'd')}${seg(h, 'h')}${seg(m, 'm')}${seg(sec, 's')}</div>` +
-      `<div class="dc-sub">${dueDayCompact(new Date(dueMs))}</div>`;
+      `<div class="dc-nums">${seg(d, 'd')}${seg(h, 'h')}${seg(m, 'm')}${seg(sec, 's')}</div>`;
   } else {
     const elapsed = now - dueMs;
     if (elapsed < 86400000) {
@@ -1772,16 +1771,17 @@ function buildWatchDPOptions(selectEl) {
     selectEl.appendChild(opt);
   });
 
-  // Default-select logic: normally select the current bid period, BUT if we're
-  // within 29 days of the next bid period starting, default to the next period
-  // instead (officers are typically preparing the upcoming bid at that point).
+  // Default-select logic: normally select the current bid period, BUT once
+  // we're within AUTO_ADVANCE_DAYS (15) of the next period's bid DUE DATE —
+  // the deadline that falls inside the current timeframe — default to the
+  // next period instead: the bid window is closing and officers should be
+  // working the upcoming period, not the one already in progress.
   let defaultGroup = allGroups[currentIdx];
   const nextGroup = allGroups[currentIdx + 1];
   if (nextGroup) {
-    const daysUntilNext = Math.ceil(
-      (nextGroup[0].start.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    if (daysUntilNext >= 0 && daysUntilNext <= 29) {
+    const nextDue = dueDateFor(nextGroup[0]); // 6 PM PT, 26 days before next start
+    const advanceAtMs = nextDue.getTime() - AUTO_ADVANCE_DAYS * 86400000;
+    if (now.getTime() >= advanceAtMs) {
       defaultGroup = nextGroup;
     }
   }
@@ -1867,6 +1867,27 @@ function updateWatchRange() {
 }
 wStartDP.addEventListener('change', updateWatchRange);
 updateWatchRange();
+
+/* ============================================================
+   AUTO-ADVANCE WATCHDOG
+   The default period is computed at load, but a page left open across the
+   threshold (next period's due date − 15 days) should still roll forward.
+   Re-check once a minute and rebuild the selector when the default changes.
+   A manual selection by the user pins the period and disables auto-advance
+   for the rest of the session.
+   ============================================================ */
+let userPinnedPeriod = false;
+wStartDP.addEventListener('change', () => { userPinnedPeriod = true; });
+
+setInterval(() => {
+  if (userPinnedPeriod || isFullYear()) return;
+  const before = wStartDP.value;
+  buildWatchDPOptions(wStartDP); // recomputes rolling window + default vs. now
+  if (wStartDP.value !== before) {
+    updateWatchRange();
+    buildAllSlots();
+  }
+}, 60000);
 
 /* ============================================================
    FULL-YEAR YEAR PICKER + BID MODE TOGGLE
