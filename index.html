@@ -3460,10 +3460,12 @@ function generateCombinedPDF() {
     recipients.push('PSSscheduling@lawa.org');
   }
 
-  // Build the CSV companion only when the bid actually contains RDO selections.
-  // A watch-only bid ships as PDF alone — the CSV grid carries the 28-day
-  // day-off marks, which a watch bid doesn't have.
-  const bidCsv = hasAnyRDO ? buildBidCSV({
+  // Build the Excel (.xlsx) companion only when the bid actually contains RDO
+  // selections. A watch-only bid ships as PDF alone — the spreadsheet grid
+  // carries the 28-day day-off marks, which a watch bid doesn't have. A real
+  // .xlsx (not CSV) so scheduling can open it directly in Excel and copy/paste
+  // rows into their master calendar.
+  const bidWorkbook = hasAnyRDO ? buildBidWorkbook({
     nameWithRank, serial, curWatch, dps, rdoSlots, includedDPs,
     hasWatchBid, watch1, watch2, isFullYear: isFullYear(), watchStateGroups, isEmptyBid
   }) : null;
@@ -3679,21 +3681,36 @@ function generateCombinedPDF() {
     body = `Please see my ${daysOffClause(rdoInfos)}`;
   }
 
-  const csvName = filename.replace(/\.pdf$/, '.csv');
-  shareOrFallbackPDF(doc, filename, recipients, subject, body, bidCsv, csvName);
+  const xlsxName = filename.replace(/\.pdf$/, '.xlsx');
+  shareOrFallbackPDF(doc, filename, recipients, subject, body, bidWorkbook, xlsxName);
 }
 
 // Email handoff strategy:
-//   • Mobile → Web Share API attaches BOTH the PDF and CSV to the share sheet; the
-//     officer picks their mail app and the files come along. Web Share can't set the
-//     recipient, so the To: address rides in the share text. If file-sharing is
-//     unavailable, both files are downloaded and a pre-addressed mailto is opened so
-//     they can be attached manually (mailto alone cannot carry attachments).
-//   • Desktop → download the PDF first (within the click gesture), then the CSV.
+//   • Mobile → Web Share API attaches BOTH the PDF and the Excel (.xlsx) file to the
+//     share sheet; the officer picks their mail app and the files come along. Web
+//     Share can't set the recipient, so the To: address rides in the share text. If
+//     file-sharing is unavailable, both files are downloaded and a pre-addressed
+//     mailto is opened so they can be attached manually (mailto alone cannot carry
+//     attachments).
+//   • Desktop → download the PDF first (within the click gesture), then the .xlsx.
 //     The officer attaches and addresses the email from their mail app.
-async function shareOrFallbackPDF(doc, filename, recipients, subject, body, csvText, csvName) {
-  const CSV_MIME = 'text/csv';
+async function shareOrFallbackPDF(doc, filename, recipients, subject, body, workbook, xlsxName) {
+  const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
   const pdfBlob = doc.output('blob');
+
+  // Serialize the ExcelJS workbook to a real .xlsx binary up front (fast — a few ms
+  // for a bid-sized workbook), so the single navigator.share() call below still
+  // happens inside the click's transient activation window.
+  let xlsxBlob = null;
+  if (workbook && xlsxName) {
+    try {
+      const buf = await workbook.xlsx.writeBuffer();
+      xlsxBlob = new Blob([buf], { type: XLSX_MIME });
+    } catch (e) {
+      // Workbook serialization failed — ship the PDF alone rather than blocking.
+      xlsxBlob = null;
+    }
+  }
 
   // Detect if we're on an actual mobile device. Web Share API on desktop browsers
   // (Chrome on Windows in particular) reports support but routes through OS share
@@ -3707,23 +3724,22 @@ async function shareOrFallbackPDF(doc, filename, recipients, subject, body, csvT
   // text (and a mailto fallback surfaces it if file-sharing isn't available).
   if (isMobile) {
     const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
-    const csvFile = (csvText && csvName)
-      ? new File([csvText], csvName, { type: CSV_MIME }) : null;
+    const xlsxFile = xlsxBlob ? new File([xlsxBlob], xlsxName, { type: XLSX_MIME }) : null;
     const shareText = `To: ${recipients.join(', ')}\n\n${body}`;
 
     // Pick the file set SYNCHRONOUSLY, then make exactly ONE navigator.share() call.
     // This is the critical part for Android: a click's transient activation is spent
     // by the first share() call, so a *second* call (e.g. retrying PDF-only after a
-    // failed PDF+CSV attempt) is rejected with NotAllowedError and no dialog ever
+    // failed PDF+XLSX attempt) is rejected with NotAllowedError and no dialog ever
     // opens. canShare() is synchronous and doesn't consume activation, so we use it
-    // to choose the largest set that's actually shareable, prefer PDF+CSV, fall back
+    // to choose the largest set that's actually shareable, prefer PDF+XLSX, fall back
     // to PDF-only, and only then call share() once. File sharing (Web Share Level 2)
     // always ships alongside canShare, so its absence means files can't be shared at
     // all — we go straight to download rather than burn the gesture on a doomed call.
     let shareFiles = null;
     if (navigator.share && navigator.canShare) {
-      if (csvFile && navigator.canShare({ files: [pdfFile, csvFile], title: subject, text: shareText })) {
-        shareFiles = [pdfFile, csvFile];
+      if (xlsxFile && navigator.canShare({ files: [pdfFile, xlsxFile], title: subject, text: shareText })) {
+        shareFiles = [pdfFile, xlsxFile];
       } else if (navigator.canShare({ files: [pdfFile], title: subject, text: shareText })) {
         shareFiles = [pdfFile];
       }
@@ -3745,21 +3761,19 @@ async function shareOrFallbackPDF(doc, filename, recipients, subject, body, csvT
     // Web Share unavailable, files not shareable, or the share call failed →
     // download both files, then open a pre-addressed email to attach them manually.
     downloadBlob(pdfBlob, filename);
-    if (csvFile) downloadBlob(new Blob([csvText], { type: CSV_MIME }), csvName);
+    if (xlsxBlob) downloadBlob(xlsxBlob, xlsxName);
     const mailto = `mailto:${encodeURIComponent(recipients.join(','))}` +
       `?subject=${encodeURIComponent(subject)}` +
-      `&body=${encodeURIComponent(body + `\n\nAttach the downloaded files: ${filename}${csvFile ? ' and ' + csvName : ''}`)}`;
+      `&body=${encodeURIComponent(body + `\n\nAttach the downloaded files: ${filename}${xlsxBlob ? ' and ' + xlsxName : ''}`)}`;
     setTimeout(() => { window.location.href = mailto; }, 500);
     toast('Files downloaded — attach them to the email');
     return;
   }
 
-  // DESKTOP: download the PDF first (inside the click gesture), then the CSV.
+  // DESKTOP: download the PDF first (inside the click gesture), then the .xlsx.
   downloadBlob(pdfBlob, filename);
-  if (csvText && csvName) {
-    downloadBlob(new Blob([csvText], { type: CSV_MIME }), csvName);
-  }
-  toast(csvText && csvName ? 'PDF + CSV downloaded' : 'PDF downloaded');
+  if (xlsxBlob) downloadBlob(xlsxBlob, xlsxName);
+  toast(xlsxBlob ? 'PDF + Excel file downloaded' : 'PDF downloaded');
 }
 
 function generateWatchPDF() { generateCombinedPDF(); }
